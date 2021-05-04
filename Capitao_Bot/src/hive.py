@@ -22,6 +22,7 @@ class CapitaoBotHivemind(PythonHivemind):
         # drone_indices is a set, so you cannot just pick first element.
         self.index = next(iter(self.drone_indices))
         self.team = packet.game_cars[self.index].team
+        #self.crew = [Sailor(index) for index in self.drone_indices]
 
         # Identifying the captain
         self.im_captain = self.index == min(self.drone_indices)
@@ -58,6 +59,7 @@ class CapitaoBotHivemind(PythonHivemind):
         # Gather some information about our car and the ball
         my_car = packet.game_cars[self.index]
         car_location = Vec3(my_car.physics.location)
+        car_locations = {index: Vec3(packet.game_cars[index].physics.location) for index in self.drone_indices}
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
 
@@ -73,16 +75,26 @@ class CapitaoBotHivemind(PythonHivemind):
             # replays, so check it to avoid errors.
             if ball_in_future is not None:
                 target_location = Vec3(ball_in_future.physics.location)
-                self.renderer.draw_line_3d(ball_location, target_location, self.renderer.cyan())
+                #self.renderer.draw_line_3d(ball_location, target_location, self.renderer.cyan())
 
         # Draw some things to help understand what the bot is thinking
-        self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
-        self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
+        # Make sure it's only one bot rendering this, to avoid race conditions
+        if(self.im_captain):
+            self.renderer.begin_rendering()
 
-        if 750 < car_velocity.length() < 800:
+            for index in self.drone_indices:
+                self.renderer.draw_line_3d(car_locations[index], target_location, self.renderer.white())
+
+            self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
+            self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
+            
+            self.renderer.end_rendering()
+
+        #if 750 < car_velocity.length() < 800:
             # We'll do a front flip if the car is moving at a certain speed.
-            return self.begin_front_flip(packet)
+            #self.logger.info("Front flip!")
+
+            #return self.begin_front_flip(packet)
 
         controls = PlayerInput(throttle=1.0, steer=steer_toward_target(my_car, target_location))
 
