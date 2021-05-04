@@ -12,51 +12,42 @@ from util.drive import steer_toward_target
 from util.sequence import Sequence, ControlStep
 from util.vec import Vec3
 
-# Link to Hivemind wiki: https://github.com/ViliamVadocz/Hivemind/wiki/
+from Sailor import Sailor
+from captain_strat import CaptainStrategy
 
 class CapitaoBotHivemind(PythonHivemind):
     def initialize_hive(self, packet: GameTickPacket) -> None:
-        self.logger.info("Initialised!")
+        self.logger.info("Initialising Crew..")
 
         # Find out team by looking at packet.
         # drone_indices is a set, so you cannot just pick first element.
         self.index = next(iter(self.drone_indices))
         self.team = packet.game_cars[self.index].team
-        #self.crew = [Sailor(index) for index in self.drone_indices]
 
         # Identifying the captain
         self.im_captain = self.index == min(self.drone_indices)
+        self.strategy = CaptainStrategy()
 
-        # Initialise objects and attributes here!
-        # I suggest making a Car or Drone object for each of your drones
-        # that will store info about them.
-        self.active_sequence: Sequence = None
-        self.boost_pad_tracker = BoostPadTracker()
+        # Initialise objects and attributes
+        # Its better to use a dict, since indexes matter
+        self.crew = {index: Sailor(index) for index in self.drone_indices}
 
     def get_outputs(self, packet: GameTickPacket) -> Dict[int, PlayerInput]:
-
-        # 3 States: Kickoff, Attack, Defense
-
-        ## Kickoff - rush to the ball if you're the closest to it
-
-        ## Attack - if the ball is on the enemy field, allocate two "Sailors" to get there
-
-        ## Defense - if the ball is on our field, allocate two "Sailors" to get here
-
-        # Return a dictionary where the keys are indices of your drones and
-        # the values are PlayerInput objects (the controller inputs).
-
-        # Keep our boost pad info updated with which pads are currently active
-        #self.boost_pad_tracker.update_boost_status(packet)
+        outputs = {}
 
         # This is good to keep at the beginning of get_output. It will allow you to continue
         # any sequences that you may have started during a previous call to get_output.
-        if self.active_sequence is not None and not self.active_sequence.done:
-            controls = self.active_sequence.tick(packet)
-            if controls is not None:
-                return controls
+        for sailor_index in self.crew:
+            sailor = self.crew[sailor_index]
+            if sailor.active_sequence is not None and not sailor.active_sequence.done:
+                controls = self.convert_scp_input(sailor.active_sequence.tick(packet))
+                if controls is not None:
+                    outputs[sailor_index] = controls
 
-        # Gather some information about our car and the ball
+        # If everyone knows what to do, return
+        if len([1 for sailor in self.crew if self.crew[sailor].active_sequence is None]) == 0: return outputs
+
+        # Gather some information about our crew's positions and the ball
         my_car = packet.game_cars[self.index]
         car_location = Vec3(my_car.physics.location)
         car_locations = {index: Vec3(packet.game_cars[index].physics.location) for index in self.drone_indices}
@@ -75,7 +66,6 @@ class CapitaoBotHivemind(PythonHivemind):
             # replays, so check it to avoid errors.
             if ball_in_future is not None:
                 target_location = Vec3(ball_in_future.physics.location)
-                #self.renderer.draw_line_3d(ball_location, target_location, self.renderer.cyan())
 
         # Draw some things to help understand what the bot is thinking
         # Make sure it's only one bot rendering this, to avoid race conditions
@@ -90,13 +80,46 @@ class CapitaoBotHivemind(PythonHivemind):
             
             self.renderer.end_rendering()
 
-        #if 750 < car_velocity.length() < 800:
-            # We'll do a front flip if the car is moving at a certain speed.
-            #self.logger.info("Front flip!")
+        # Execute 1 step of each Sailor's plan
+        for index in self.crew:
+            sailor = self.crew[index]
+            if sailor.plan is None:
+                continue
 
-            #return self.begin_front_flip(packet)
+            sailor.plan.step(self.info.time_delta)
+            sailor.controls = sailor.plan.controls
 
-        controls = PlayerInput(throttle=1.0, steer=steer_toward_target(my_car, target_location))
+            if sailor.plan.finished:
+                sailor.plan = None
 
-        #return {index: PlayerInput(throttle=1.0) for index in self.drone_indices}
-        return {index: controls for index in self.drone_indices}
+        # Return a dictionary where the keys are indices of your drones and
+        # the values are PlayerInput objects (the controller inputs).
+        return {index: self.crew[index].get_input() for index in self.crew}
+
+    def begin_front_flip(self, packet, sailor):
+        # Do a front flip. We will be committed to this for a few seconds and the bot will ignore other
+        # logic during that time because we are setting the active_sequence.
+        sailor.active_sequence = Sequence([
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, pitch=-1)),
+            ControlStep(duration=0.8, controls=SimpleControllerState()),
+        ])
+
+        # Return the controls associated with the beginning of the sequence so we can start right away.
+        return self.convert_scp_input(sailor.active_sequence.tick(packet))
+
+    def convert_scp_input(self, scp) -> PlayerInput:
+        return PlayerInput(
+            throttle=scp.throttle,
+            steer=scp.steer,
+            pitch=scp.steer,
+            yaw=scp.yaw,
+            roll=scp.roll,
+            jump=scp.jump,
+            boost=scp.boost,
+            handbrake=scp.handbrake,
+            use_item=scp.use_item
+        )
+
+

@@ -1,22 +1,27 @@
-from util.boost_pad_tracker import BoostPadTracker
-from util.sequence import Sequence, ControlStep
-from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.logging_utils import get_logger
 
-from rlbot.utils.structures.game_interface import GameInterface
+from rlbot.utils.structures.bot_input_struct import PlayerInput
 
-class Sailor(BaseAgent):
+
+class Sailor:
+    """
+        Every car in the Captn Bot Team will be a Sailor. A sailor holds its index and current plan.
+        The current plan is often gonna be used to fetch input.
+    """
     def __init__(self, index: int):
-        super().__init__()
         self.index = index
         self.logger = get_logger(f'Ay ay! Sailor{index}')
-        self.active_sequence: Sequence = None
-        self.boost_pad_tracker = BoostPadTracker()
+        self.controls = PlayerInput()
+        self.plan = None
 
-    def render_target(self, car_location, target_location):
-        self.renderer.begin_rendering()
-
-        self.renderer.draw_line_3d(car_locations, target_location, self.renderer.white())
-        self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
-        
-        self.renderer.end_rendering()
+    def get_input(self) -> PlayerInput:
+        player_input = PlayerInput()
+        player_input.throttle = self.controls.throttle
+        player_input.steer = self.controls.steer
+        player_input.pitch = self.controls.pitch
+        player_input.yaw = self.controls.yaw
+        player_input.roll = self.controls.roll
+        player_input.jump = self.controls.jump
+        player_input.boost = self.controls.boost
+        player_input.handbrake = self.controls.handbrake
+        return player_input
