@@ -3,6 +3,8 @@ from typing import Callable
 
 from action.collect_boost.collect_boost import CollectBoost
 from action.kickoff.kickoff import Kickoff
+from action.shadow_ball.shadow_ball import ShadowBall
+from action.hit_ground_ball.hit_ground_ball import HitGroundBall
 
 from util.generator_utils import initialize_generator
 

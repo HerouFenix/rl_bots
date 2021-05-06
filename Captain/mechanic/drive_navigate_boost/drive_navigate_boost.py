@@ -15,7 +15,7 @@ class DriveNavigateBoost(BaseMechanic):
         super().__init__(*args, **kwargs)
         self.mechanic = DriveArriveInTime(self.agent, self.rendering_enabled)
 
-    def step(self, car: Player, boost_pads, target_loc, target_dt=0, target_dir=None) -> SimpleControllerState:
+    def get_controls(self, car: Player, boost_pads, target_loc, target_dt=0, target_dir=None) -> SimpleControllerState:
         target_loc = flatten(target_loc)
         target_dir = np.array([0.0, 0.0, 0.0]) if target_dir is None else flatten(target_dir)
         target, distance = find_fastest_path(boost_pads, car.location, target_loc, car.velocity, car.boost, target_dir)

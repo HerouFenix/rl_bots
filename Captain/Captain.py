@@ -59,14 +59,14 @@ class Captain(BaseAgent):
 
         # Draw some things to help understand what the bot is thinking
         self.renderer.draw_line_3d(self.me.location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(self.me.location, 1, 1, f"Speed: {self.me.velocity.magnitude():.1f}", self.renderer.white(),)
+        self.renderer.draw_string_3d(self.me.location, 1, 1, f"Speed: {self.me.velocity.magnitude():.1f}\nThrottle: {controls.throttle:.1f}", self.renderer.white(),)
         self.renderer.draw_rect_3d(
             target_location, 8, 8, True, self.renderer.cyan(), centered=True
         )
 
         #controls = SimpleControllerState()
         #controls.steer = steer_toward_target(self.car, target_location)
-        #controls.throttle = 1.0
+        controls.boost = 1.0
 
         return controls
 
