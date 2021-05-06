@@ -9,6 +9,9 @@ from util.utilities import physics_object, Vector
 
 from policy.base_policy import BasePolicy
 
+from skeleton.util.structure.game_data import GameData
+from skeleton.skeleton_agent import SkeletonAgent
+
 try:
     from rlutilities.linear_algebra import *
     from rlutilities.mechanics import Aerial, AerialTurn, Dodge, Wavedash, Boostdash
@@ -35,6 +38,8 @@ class Captain(BaseAgent):
         self.car = None
         self.ball_location = None
         self.policy = BasePolicy(self)
+        self.game_data = GameData(self.name, self.team, self.index)
+        self.game_data.read_field_info(self.get_field_info())
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.parse_packet(packet)
@@ -59,9 +64,9 @@ class Captain(BaseAgent):
             target_location, 8, 8, True, self.renderer.cyan(), centered=True
         )
 
-        controls = SimpleControllerState()
-        controls.steer = steer_toward_target(self.car, target_location)
-        controls.throttle = 1.0
+        #controls = SimpleControllerState()
+        #controls.steer = steer_toward_target(self.car, target_location)
+        #controls.throttle = 1.0
 
         return controls
 
@@ -99,6 +104,11 @@ class Captain(BaseAgent):
             else:
                 self.me = _obj
                 self.car = packet.game_cars[i]
+
+        self.game_data.read_game_tick_packet(packet)
+        self.game_data.read_ball_prediction_struct(self.get_ball_prediction_struct())
+        self.game_data.update_extra_game_data()
+
 
     def handle_comms(self):
         """ Responsible for handling the TMCP packets sent in the previous iteration.

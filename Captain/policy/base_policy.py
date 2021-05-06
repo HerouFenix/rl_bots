@@ -1,8 +1,10 @@
 import math
 from typing import Callable
 
-from action.collect_boost import CollectBoost
-from action.kickoff import Kickoff
+from action.collect_boost.collect_boost import CollectBoost
+from action.kickoff.kickoff import Kickoff
+
+from util.generator_utils import initialize_generator
 
 class BasePolicy:
     """ This is where the agent will pick his actions and decide the strategy to follow.
@@ -30,7 +32,7 @@ class BasePolicy:
             return self.action_loop.send(game_data)
 
     @initialize_generator
-    def create_action_loop(self) -> Generator[BaseAction, GameData, None]:
+    def create_action_loop(self):
         game_data = yield
 
         while True:
@@ -40,14 +42,3 @@ class BasePolicy:
             # use action until it is finished
             while not action.finished and not action.failed:
                 game_data = yield action
-
-
-def initialize_generator(func: Callable):
-    """initializes a generator by calling next on it once"""
-
-    def result(self):
-        gen = func(self)
-        next(gen)
-        return gen
-
-    return result
