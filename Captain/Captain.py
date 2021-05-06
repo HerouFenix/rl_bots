@@ -1,4 +1,4 @@
-from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
+from rlbot.agents.base_agent import BaseAgent, GameTickPacket, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from tmcp import TMCPHandler, TMCPMessage, ActionType
@@ -7,15 +7,18 @@ from util.drive import steer_toward_target
 from util.vec import Vec3
 from util.utilities import physics_object, Vector
 
-from policy.base_policy import BasePolicy
+#from policy.base_policy import BasePolicy
 
-from skeleton.util.structure.game_data import GameData
-from skeleton.skeleton_agent import SkeletonAgent
+from action.kickoffs.kickoff import Kickoff
+from action.maneuver import Maneuver
+from policy import solo_strategy, teamplay_strategy
+from tools.drawing import DrawingTool
+from tools.game_info import GameInfo
 
 try:
     from rlutilities.linear_algebra import *
     from rlutilities.mechanics import Aerial, AerialTurn, Dodge, Wavedash, Boostdash
-    from rlutilities.simulation import Game, Ball, Car
+    from rlutilities.simulation import Game, Ball, Car, Input
 except:
     print("==========================================")
     print("\nrlutilities import failed.")
@@ -27,48 +30,68 @@ except:
 class Captain(BaseAgent):
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
+        # Initializing general stuff here
 
     def initialize_agent(self):
         self.tmcp_handler = TMCPHandler(self)
+
+        self.info = GameInfo(self.team)
+        self.info.set_mode("soccar")
+        self.tick_counter = 0
+        self.last_latest_touch_time = 0
+        self.me = physics_object()
+        self.car = None
+
         # Assume you're the captain, if you find an index lower than yours, adjust
         self.captain = True
         self.allies = []
         self.enemies = []
-        self.me = physics_object()
-        self.car = None
-        self.ball_location = None
-        self.policy = BasePolicy(self)
-        self.game_data = GameData(self.name, self.team, self.index)
-        self.game_data.read_field_info(self.get_field_info())
+        self.policy = None
+        self.action = None
+        self.controls = SimpleControllerState()
+
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.parse_packet(packet)
 
         self.handle_comms()
         
-        action = self.policy.get_action(self.game_data)
+        self.info.read_packet(packet, self.get_field_info())
+
+        # cancel maneuver if a kickoff is happening and current maneuver isn't a kickoff maneuver
+        if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
+            self.action = None
+
+        # reset maneuver when another car hits the ball
+        touch = packet.game_ball.latest_touch
+        if (
+            touch.time_seconds > self.last_latest_touch_time
+            and touch.player_name != packet.game_cars[self.index].name
+        ):
+            self.last_latest_touch_time = touch.time_seconds
+
+            # don't reset when we're dodging, wavedashing or recovering
+            if self.action and self.action.interruptible():
+                self.action = None
+
+        # choose maneuver
+        if self.action is None:
+            
+            if self.info.get_teammates(self.info.cars[self.index]):
+                self.action = teamplay_strategy.choose_maneuver(self.info, self.info.cars[self.index])
+            else:
+                self.action = solo_strategy.choose_maneuver(self.info, self.info.cars[self.index])
         
-        controls = action.get_controls(self.game_data)
+        # execute maneuver
+        if self.action is not None:
+            self.action.step(self.info.time_delta)
+            self.controls = self.action.controls
 
+            # cancel maneuver when finished
+            if self.action.finished:
+                self.action = None
 
-
-
-
-        # By default we will chase the ball, but target_location can be changed later
-        target_location = self.ball_location
-
-        # Draw some things to help understand what the bot is thinking
-        self.renderer.draw_line_3d(self.me.location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(self.me.location, 1, 1, f"Speed: {self.me.velocity.magnitude():.1f}\nThrottle: {controls.throttle:.1f}", self.renderer.white(),)
-        self.renderer.draw_rect_3d(
-            target_location, 8, 8, True, self.renderer.cyan(), centered=True
-        )
-
-        #controls = SimpleControllerState()
-        #controls.steer = steer_toward_target(self.car, target_location)
-        controls.boost = 1.0
-
-        return controls
+        return self.controls
 
     def parse_packet(self, packet):
         """ Updates information about the cars in the game from a given packet. Location, velocity, rotation and boost level. 
@@ -104,11 +127,6 @@ class Captain(BaseAgent):
             else:
                 self.me = _obj
                 self.car = packet.game_cars[i]
-
-        self.game_data.read_game_tick_packet(packet)
-        self.game_data.read_ball_prediction_struct(self.get_ball_prediction_struct())
-        self.game_data.update_extra_game_data()
-
 
     def handle_comms(self):
         """ Responsible for handling the TMCP packets sent in the previous iteration.

@@ -10,7 +10,6 @@ __all__  = [
 "Boostdash",
 "Dodge",
 "Drive",
-"FollowPath",
 "Jump",
 "Wavedash"
 ]
@@ -25,50 +24,18 @@ class Aerial():
     def simulate(self) -> rlutilities.simulation.Car: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def angle_threshold(self) -> float:
-        pass
-    
-    @property
-    def arrival_time(self) -> float:
-        pass
-    
-    @property
-    def boost_estimate(self) -> float:
-        pass
-    
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
-    @property
-    def reorient_distance(self) -> float:
-        pass
-    
-    @property
-    def target(self) -> vec3:
-        pass
-    
-    @property
-    def target_orientation(self) -> Optional[mat3]:
-        pass
-    
-    @property
-    def throttle_distance(self) -> float:
-        pass
-    
-    @property
-    def up(self) -> vec3:
-        pass
-    
-    @property
-    def velocity_estimate(self) -> vec3:
-        pass
-    
+    angle_threshold: float
+    arrival_time: float
+    boost_estimate: float
+    controls: rlutilities.simulation.Input
+    finished: bool
+    reorient_distance: float
+    single_jump: bool
+    target: vec3
+    target_orientation: Optional[mat3]
+    throttle_distance: float
+    up: vec3
+    velocity_estimate: vec3
     pass
 class AerialTurn():
 
@@ -76,48 +43,21 @@ class AerialTurn():
     def simulate(self) -> rlutilities.simulation.Car: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def alpha(self) -> vec3:
-        pass
-    
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def eps_omega(self) -> float:
-        pass
-    
-    @property
-    def eps_phi(self) -> float:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
-    @property
-    def horizon_time(self) -> float:
-        pass
-    
-    @property
-    def target(self) -> mat3:
-        pass
-    
+    alpha: vec3
+    controls: rlutilities.simulation.Input
+    eps_omega: float
+    eps_phi: float
+    finished: bool
+    horizon_time: float
+    target: mat3
     pass
 class Boostdash():
 
     def __init__(self, arg0: rlutilities.simulation.Car) -> None: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
+    controls: rlutilities.simulation.Input
+    finished: bool
     pass
 class Dodge():
     forward_torque = 224.0
@@ -133,38 +73,14 @@ class Dodge():
     def simulate(self) -> rlutilities.simulation.Car: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def delay(self) -> Optional[float]:
-        pass
-    
-    @property
-    def direction(self) -> Optional[vec2]:
-        pass
-    
-    @property
-    def duration(self) -> Optional[float]:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
-    @property
-    def preorientation(self) -> Optional[mat3]:
-        pass
-    
-    @property
-    def target(self) -> Optional[vec3]:
-        pass
-    
-    @property
-    def timer(self) -> float:
-        pass
-    
+    controls: rlutilities.simulation.Input
+    delay: Optional[float]
+    direction: Optional[vec2]
+    duration: Optional[float]
+    finished: bool
+    preorientation: Optional[mat3]
+    target: Optional[vec3]
+    timer: float
     pass
 class Drive():
     boost_accel = 991.6669921875
@@ -182,60 +98,11 @@ class Drive():
     @staticmethod
     def throttle_accel(arg0: float) -> float: ...
 
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
-    @property
-    def reaction_time(self) -> float:
-        pass
-    
-    @property
-    def speed(self) -> float:
-        pass
-    
-    @property
-    def target(self) -> vec3:
-        pass
-    
-    pass
-class FollowPath():
-
-    def __init__(self, arg0: rlutilities.simulation.Car) -> None: ...
-    def step(self, arg0: float) -> None: ...
-
-    @property
-    def arrival_speed(self) -> float:
-        pass
-    
-    @property
-    def arrival_time(self) -> float:
-        pass
-    
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def expected_error(self) -> float:
-        pass
-    
-    @property
-    def expected_speed(self) -> float:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
-    @property
-    def path(self) -> rlutilities.simulation.Curve:
-        pass
-    
+    controls: rlutilities.simulation.Input
+    finished: bool
+    reaction_time: float
+    speed: float
+    target: vec3
     pass
 class Jump():
     acceleration = 1458.333251953125
@@ -247,34 +114,16 @@ class Jump():
     def simulate(self) -> rlutilities.simulation.Car: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def duration(self) -> float:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
+    controls: rlutilities.simulation.Input
+    duration: float
+    finished: bool
     pass
 class Wavedash():
 
     def __init__(self, arg0: rlutilities.simulation.Car) -> None: ...
     def step(self, arg0: float) -> None: ...
 
-    @property
-    def controls(self) -> rlutilities.simulation.Input:
-        pass
-    
-    @property
-    def direction(self) -> Optional[vec2]:
-        pass
-    
-    @property
-    def finished(self) -> bool:
-        pass
-    
+    controls: rlutilities.simulation.Input
+    direction: Optional[vec2]
+    finished: bool
     pass

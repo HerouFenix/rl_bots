@@ -21,6 +21,7 @@ __all__  = [
 "normalize",
 "rotation",
 "rotation_to_axis",
+"rotation_to_euler",
 "sgn",
 "transpose",
 "xy"
@@ -71,12 +72,12 @@ class vec3():
     def __iadd__(self, arg0: vec3) -> vec3: ...
     def __imul__(self, arg0: float) -> vec3: ...
     @overload
-    def __init__(self, arg0: vec2) -> None: 
+    def __init__(self, arg0: float, arg1: float, arg2: float) -> None: 
         pass
     @overload
-    def __init__(self, arg0: vec3) -> None: ...
+    def __init__(self, arg0: vec2) -> None: ...
     @overload
-    def __init__(self, arg0: float, arg1: float, arg2: float) -> None: ...
+    def __init__(self, arg0: vec3) -> None: ...
     def __isub__(self, arg0: vec3) -> vec3: ...
     def __itruediv__(self, arg0: float) -> vec3: ...
     def __mul__(self, arg0: float) -> vec3: ...
@@ -116,13 +117,10 @@ def angle_between(arg0: vec3, arg1: vec3) -> float:
 def axis_to_rotation(arg0: vec3) -> mat3:
     pass
 @overload
-def clip(arg0: int, arg1: int, arg2: int) -> int:
-    pass
-@overload
 def clip(arg0: float, arg1: float, arg2: float) -> float:
     pass
 @overload
-def cross(arg0: vec3) -> vec3:
+def clip(arg0: int, arg1: int, arg2: int) -> int:
     pass
 @overload
 def cross(arg0: vec2) -> vec2:
@@ -131,31 +129,34 @@ def cross(arg0: vec2) -> vec2:
 def cross(arg0: vec3, arg1: vec3) -> vec3:
     pass
 @overload
-def dot(arg0: mat2, arg1: mat2) -> mat2:
+def cross(arg0: vec3) -> vec3:
     pass
 @overload
 def dot(arg0: vec2, arg1: mat2) -> vec2:
     pass
 @overload
-def dot(arg0: mat2, arg1: vec2) -> vec2:
+def dot(arg0: mat3, arg1: vec3) -> vec3:
     pass
 @overload
 def dot(arg0: vec2, arg1: vec2) -> float:
     pass
 @overload
-def dot(arg0: vec4, arg1: vec4) -> float:
+def dot(arg0: vec3, arg1: mat3) -> vec3:
+    pass
+@overload
+def dot(arg0: mat2, arg1: mat2) -> mat2:
     pass
 @overload
 def dot(arg0: vec3, arg1: vec3) -> float:
     pass
 @overload
+def dot(arg0: vec4, arg1: vec4) -> float:
+    pass
+@overload
+def dot(arg0: mat2, arg1: vec2) -> vec2:
+    pass
+@overload
 def dot(arg0: mat3, arg1: mat3) -> mat3:
-    pass
-@overload
-def dot(arg0: vec3, arg1: mat3) -> vec3:
-    pass
-@overload
-def dot(arg0: mat3, arg1: vec3) -> vec3:
     pass
 def euler_to_rotation(arg0: vec3) -> mat3:
     pass
@@ -168,10 +169,10 @@ def inv(arg0: mat3) -> mat3:
 def look_at(arg0: vec3, arg1: vec3) -> mat3:
     pass
 @overload
-def norm(arg0: vec2) -> float:
+def norm(arg0: vec3) -> float:
     pass
 @overload
-def norm(arg0: vec3) -> float:
+def norm(arg0: vec2) -> float:
     pass
 @overload
 def normalize(arg0: vec2) -> vec2:
@@ -182,6 +183,8 @@ def normalize(arg0: vec3) -> vec3:
 def rotation(arg0: float) -> mat2:
     pass
 def rotation_to_axis(arg0: mat3) -> vec3:
+    pass
+def rotation_to_euler(arg0: mat3) -> vec3:
     pass
 def sgn(arg0: float) -> float:
     pass
