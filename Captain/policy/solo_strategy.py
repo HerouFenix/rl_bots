@@ -37,6 +37,7 @@ def choose_action(info: GameInfo, my_car: Car):
                         or abs(pad.position[0] - my_car.position[0]) > 6000}
 
     # if ball is in a dangerous position, clear it
+    # if the ball is or is going to be in a dangerous position
     if (
         ground_distance(my_intercept, my_goal) < 3000
         and (abs(my_intercept.position[0]) < 2000 or abs(my_intercept.position[1]) < 4500)
@@ -47,6 +48,7 @@ def choose_action(info: GameInfo, my_car: Car):
         return defense.any_clear(info, my_intercept.car)
 
     # if I'm low on boost and the ball is not near my goal, go for boost
+    # if i'm near a boost, the ball is not near my goal and i'm low
     if my_car.boost < 10 and ground_distance(my_intercept, their_goal) > 3000:
         refuel = Refuel(my_car, info, forbidden_pads=banned_boostpads)
         if refuel.pad: return refuel

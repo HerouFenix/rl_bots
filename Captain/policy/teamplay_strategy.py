@@ -54,6 +54,7 @@ def choose_action(info: GameInfo, my_car: Car):
         # otherwise try to clear
         else:
             return defense.any_clear(info, my_intercept.car)
+    # else: tell the guy to intercept it
 
     # if I'm nearest to goal, stay far back
     if min(my_team, key=lambda car: distance(car, my_goal)) is my_car:

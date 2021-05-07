@@ -7,11 +7,9 @@ from util.drive import steer_toward_target
 from util.vec import Vec3
 from util.utilities import physics_object, Vector
 
-#from policy.base_policy import BasePolicy
-
 from action.kickoffs.kickoff import Kickoff
 from action.maneuver import Maneuver
-from policy import solo_strategy, teamplay_strategy
+from policy import solo_strategy, teamplay_strategy, base_policy
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
@@ -53,24 +51,27 @@ class Captain(BaseAgent):
         self.action = None
         self.controls = SimpleControllerState()
 
+        # Team actions {index: Action}
+        self.team_actions = {}
+
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.parse_packet(packet)
 
         self.handle_comms()
-        
-        self.info.read_packet(packet, self.get_field_info())
 
-        # cancel maneuver if a kickoff is happening and current maneuver isn't a kickoff maneuver
+        # cancel action if a kickoff is happening and current action isn't a kickoff action
         if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
             self.action = None
 
-        # reset maneuver when another car hits the ball
+        if packet.game_info.is_kickoff_pause:
+            for index in self.team_actions:
+                if not isinstance(self.team_actions[index], Kickoff):
+                    self.team_actions[index] = None
+
+        # reset action when another car hits the ball
         touch = packet.game_ball.latest_touch
-        if (
-            touch.time_seconds > self.last_latest_touch_time
-            and touch.player_name != packet.game_cars[self.index].name
-        ):
+        if (touch.time_seconds > self.last_latest_touch_time and touch.player_name != packet.game_cars[self.index].name):
             self.last_latest_touch_time = touch.time_seconds
 
             # don't reset when we're dodging, wavedashing or recovering
@@ -87,6 +88,11 @@ class Captain(BaseAgent):
                 self.action = teamplay_strategy.choose_action(self.info, self.info.cars[self.index])
             else:
                 self.action = solo_strategy.choose_action(self.info, self.info.cars[self.index])
+
+        # iterate over cars, pick action for each, append to self.team_actions
+        my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
+        
+        self.team_actions = {index: solo_strategy.choose_action(self.info, self.info.cars[index]) for index in my_team}
         
         # execute action
         if self.action is not None:
@@ -112,6 +118,7 @@ class Captain(BaseAgent):
         """ Updates information about the cars in the game from a given packet. Location, velocity, rotation and boost level. 
             Also useful to keep everyone in check with who the captain is.
         """
+        self.info.read_packet(packet, self.get_field_info())
         self.ball_location = Vec3(packet.game_ball.physics.location)
 
         for i in range(packet.num_cars):
@@ -147,6 +154,8 @@ class Captain(BaseAgent):
         """ Responsible for handling the TMCP packets sent in the previous iteration.
             Marujos read messages, captains send them. (general rule)
             TMCP only supports a pre-defined set of messages, so we will be adding a few by changing certain parameters.
+            Also, the original implementation of TMCP does not support targeted messages, only broadcasts. So we are going to instance the message and replace
+            the index of the sender with the index of the receiver.
         """
 
         # Receive and parse all new matchcomms messages into TMCPMessage objects.
@@ -154,13 +163,12 @@ class Captain(BaseAgent):
 
         # Decide what to do with your mateys
         if self.captain:
-            # Handle TMCPMessages.
-            for message in new_messages:
-                if message.action_type == ActionType.BOOST:
-                    print(message)
+            for index in self.team_actions:
+                self.tmcp_handler.send(TMCPMessage.boost_action(self.team, index, -1))
+
         # Check if there are new orders
         else:
             # Handle TMCPMessages.
             for message in new_messages:
-                if message.action_type == ActionType.BOOST:
-                    print(message)
+                if message.action_type == ActionType.BOOST and message.index == self.index:
+                    print(self.index, message)
