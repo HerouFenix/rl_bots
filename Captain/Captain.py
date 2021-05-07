@@ -121,7 +121,7 @@ class Captain(BaseAgent):
             if self.captain and i < self.index and car.team == self.team:
                 self.captain = False
                 self.logger.info("Just got demoted.. captain now is " + str(i))
-                self.tmcp_handler.send_boost_action(-420)
+                self.tmcp_handler.send_boost_action(ACK)
 
             # Fetching relevant information about every car
             _obj = physics_object()
@@ -145,19 +145,21 @@ class Captain(BaseAgent):
 
     def handle_comms(self):
         """ Responsible for handling the TMCP packets sent in the previous iteration.
-            Marujos read messages, captains send them.
+            Marujos read messages, captains send them. (general rule)
             TMCP only supports a pre-defined set of messages, so we will be adding a few by changing certain parameters.
         """
+
+        # Receive and parse all new matchcomms messages into TMCPMessage objects.
+        new_messages: List[TMCPMessage] = self.tmcp_handler.recv()
+
         # Decide what to do with your mateys
         if self.captain:
-            pass
+            # Handle TMCPMessages.
+            for message in new_messages:
+                if message.action_type == ActionType.BOOST:
+                    print(message)
         # Check if there are new orders
         else:
-            # Receive and parse all new matchcomms messages into TMCPMessage objects.
-            new_messages: List[TMCPMessage] = self.tmcp_handler.recv()
-            if new_messages:
-                self.logger.info(new_messages)
-
             # Handle TMCPMessages.
             for message in new_messages:
                 if message.action_type == ActionType.BOOST:
