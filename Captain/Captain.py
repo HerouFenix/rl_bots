@@ -26,6 +26,8 @@ except:
     quit()
 
 
+ACK = -1
+RENDERING = True
 
 class Captain(BaseAgent):
     def __init__(self, name, team, index):
@@ -33,10 +35,11 @@ class Captain(BaseAgent):
         # Initializing general stuff here
 
     def initialize_agent(self):
-        self.tmcp_handler = TMCPHandler(self)
 
+        self.tmcp_handler = TMCPHandler(self)
         self.info = GameInfo(self.team)
         self.info.set_mode("soccar")
+        self.draw = DrawingTool(self.renderer, self.team)
         self.tick_counter = 0
         self.last_latest_touch_time = 0
         self.me = physics_object()
@@ -74,22 +77,34 @@ class Captain(BaseAgent):
             if self.action and self.action.interruptible():
                 self.action = None
 
-        # choose maneuver
+        # choose action
         if self.action is None:
+
+            if RENDERING:
+                self.draw.clear()
             
             if self.info.get_teammates(self.info.cars[self.index]):
-                self.action = teamplay_strategy.choose_maneuver(self.info, self.info.cars[self.index])
+                self.action = teamplay_strategy.choose_action(self.info, self.info.cars[self.index])
             else:
-                self.action = solo_strategy.choose_maneuver(self.info, self.info.cars[self.index])
+                self.action = solo_strategy.choose_action(self.info, self.info.cars[self.index])
         
-        # execute maneuver
+        # execute action
         if self.action is not None:
             self.action.step(self.info.time_delta)
             self.controls = self.action.controls
 
+            if RENDERING:
+                self.draw.group("maneuver")
+                self.draw.color(self.draw.yellow)
+                self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
+                self.action.render(self.draw)
+
             # cancel maneuver when finished
             if self.action.finished:
                 self.action = None
+                
+        if RENDERING:
+            self.draw.execute()
 
         return self.controls
 
@@ -131,6 +146,7 @@ class Captain(BaseAgent):
     def handle_comms(self):
         """ Responsible for handling the TMCP packets sent in the previous iteration.
             Marujos read messages, captains send them.
+            TMCP only supports a pre-defined set of messages, so we will be adding a few by changing certain parameters.
         """
         # Decide what to do with your mateys
         if self.captain:
@@ -139,6 +155,8 @@ class Captain(BaseAgent):
         else:
             # Receive and parse all new matchcomms messages into TMCPMessage objects.
             new_messages: List[TMCPMessage] = self.tmcp_handler.recv()
+            if new_messages:
+                self.logger.info(new_messages)
 
             # Handle TMCPMessages.
             for message in new_messages:

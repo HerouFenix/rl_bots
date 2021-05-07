@@ -11,7 +11,7 @@ from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction
 
 
-def choose_maneuver(info: GameInfo, my_car: Car):
+def choose_action(info: GameInfo, my_car: Car):
     ball = info.ball
     their_goal = ground(info.their_goal.center)
     my_goal = ground(info.my_goal.center)

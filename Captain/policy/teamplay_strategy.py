@@ -8,7 +8,7 @@ from tools.intercept import Intercept
 from tools.vector_math import align, ground, distance, ground_distance
 
 
-def choose_maneuver(info: GameInfo, my_car: Car):
+def choose_action(info: GameInfo, my_car: Car):
     ball = info.ball
     teammates = info.get_teammates(my_car)
     my_team = [my_car] + teammates
