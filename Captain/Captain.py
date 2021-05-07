@@ -13,6 +13,11 @@ from policy import solo_strategy, teamplay_strategy, base_policy
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
+from policy.base_policy import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY
+from policy import offense, defense, kickoffs
+
+from action.recovery import Recovery
+
 try:
     from rlutilities.linear_algebra import *
     from rlutilities.mechanics import Aerial, AerialTurn, Dodge, Wavedash, Boostdash
@@ -23,8 +28,6 @@ except:
     print("\n==========================================")
     quit()
 
-
-ACK = -1
 RENDERING = True
 
 class Captain(BaseAgent):
@@ -51,14 +54,20 @@ class Captain(BaseAgent):
         self.action = None
         self.controls = SimpleControllerState()
 
-        # Team actions {index: Action}
+        # Team actions {index: Action Macro}
         self.team_actions = {}
+        self.last_sent = {}
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.parse_packet(packet)
 
-        self.handle_comms()
+        if not self.captain:
+            if self.action is not None:
+                self.action.step(self.info.time_delta)
+                self.controls = self.action.controls
+
+                return self.controls
 
         # cancel action if a kickoff is happening and current action isn't a kickoff action
         if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
@@ -93,6 +102,10 @@ class Captain(BaseAgent):
         my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
         
         self.team_actions = {index: solo_strategy.choose_action(self.info, self.info.cars[index]) for index in my_team}
+
+        self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
+
+        self.handle_comms()
         
         # execute action
         if self.action is not None:
@@ -164,11 +177,50 @@ class Captain(BaseAgent):
         # Decide what to do with your mateys
         if self.captain:
             for index in self.team_actions:
-                self.tmcp_handler.send(TMCPMessage.boost_action(self.team, index, -1))
+                success = False
+                message = None
+
+                if index in self.last_sent and self.last_sent[index] == self.team_actions[index]:
+                    continue
+
+                if self.team_actions[index] == KICKOFF:
+                    message = TMCPMessage.demo_action(self.team, index, -1)
+
+                elif self.team_actions[index] == GEN_DEFEND:
+                    message = TMCPMessage.boost_action(self.team, index, GEN_DEFEND)
+
+                elif self.team_actions[index] == CLUTCH_DEFEND:
+                    message = TMCPMessage.boost_action(self.team, index, CLUTCH_DEFEND)
+
+                elif self.team_actions[index] == BALL:
+                    message = TMCPMessage.ball_action(self.team, index)
+
+                elif self.team_actions[index] == RECOVERY:
+                    message = TMCPMessage.defend_action(self.team, index)
+
+
+                if index == self.index:
+                    self.parse_message(message)
+
+                success = self.tmcp_handler.send(message)
+
+                if success:
+                    self.last_sent[index] = self.team_actions[index]
 
         # Check if there are new orders
         else:
             # Handle TMCPMessages.
             for message in new_messages:
-                if message.action_type == ActionType.BOOST and message.index == self.index:
-                    print(self.index, message)
+                if message.index == self.index:
+                    self.parse_message(message)
+
+    def parse_message(self, message):
+        if message.action_type == ActionType.DEMO:
+            self.logger.info("Got it, car " + str(self.index) + " is supposed to kick off!")
+            self.action = kickoffs.choose_kickoff(self.info, self.info.cars[self.index])
+
+        elif message.action_type == ActionType.BOOST:
+            self.action = base_policy.general_defense(self.info, self.info.cars[self.index], clutch=(message.target == CLUTCH_DEFEND))
+
+        elif message.action_type == ActionType.DEFEND:
+            self.action = Recovery(self.info.cars[self.index])

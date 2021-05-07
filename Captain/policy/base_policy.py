@@ -10,8 +10,15 @@ from tools.intercept import Intercept
 from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction, distance
 
+ACK = -1
+KICKOFF = -2
+GEN_DEFEND = -3
+CLUTCH_DEFEND = -4
+BALL = -5
+RECOVERY = -6
 
-def choose_action(info: GameInfo, my_car: Car):
+
+def choose_action(info: GameInfo, my_car: Car, team):
     """ Choose actions for every car in the team?
     """
     ball = info.ball
@@ -21,22 +28,30 @@ def choose_action(info: GameInfo, my_car: Car):
     my_goal = ground(info.my_goal.center)
     opponents = info.get_opponents()
 
-    assigned_actions = []
+    assigned_actions = {index: None for index in team}
 
 
     # recovery
-    if not my_car.on_ground:
-        return Recovery(my_car)
+    for index in team:
+        if not info.cars[index].on_ground:
+            assigned_actions[index] = RECOVERY #Recovery(my_car)
 
 
     # kickoff
-    if ball.position[0] == 0 and ball.position[1] == 0:
+    if True: #ball.position[0] == 0 and ball.position[1] == 0:
+        closest = min(distance(car, ball) for car in my_team)
 
-        # find nearest element to go for kickoff and pop him from teammates, since he already has an action assigned
-        # nearest_car = [car for car in my_team].sort(key=lambda x: distance(x, ball))[0]
-        if distance(my_car, ball) == min(distance(car, ball) for car in my_team):
-            return kickoffs.choose_kickoff(info, my_car)
+        #if distance(my_car, ball) == min(distance(car, ball) for car in my_team):
+            #return kickoffs.choose_kickoff(info, my_car)
 
+        # find nearest element to go for kickoff, every other one is assigned to general defense
+        for index in team:
+            if distance(info.cars[index], ball) == closest:
+                assigned_actions[index] = KICKOFF
+            else:
+                assigned_actions[index] = GEN_DEFEND
+
+        return assigned_actions
 
     ##
     info.predict_ball()
@@ -135,3 +150,27 @@ def choose_action(info: GameInfo, my_car: Car):
         if refuel.pad: return refuel
 
     return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+
+def general_defense(info, my_car, clutch=False):
+
+    my_goal = ground(info.my_goal.center)
+    their_goal = ground(info.their_goal.center)
+
+    info.predict_ball()
+
+    my_intercept = Intercept(my_car, info.ball_predictions)
+
+    ball_in_their_half = abs(my_intercept.position[1] - their_goal[1]) < 3000
+    shadow_distance = 4000 if ball_in_their_half else 6000
+
+    if not clutch:
+        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+
+    if (
+        ground_distance(my_intercept, my_goal) < 3000
+        and (abs(my_intercept.position[0]) < 2000 or abs(my_intercept.position[1]) < 4500)
+        and my_car.position[2] < 300
+    ):
+        if align(my_car.position, my_intercept.ball, their_goal) > 0.5:
+            return offense.any_shot(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
+        return defense.any_clear(info, my_intercept.car)
