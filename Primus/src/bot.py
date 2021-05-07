@@ -12,7 +12,9 @@ from plays.play import Play
 from plays.actions.drive import Drive, Stop
 from plays.kickoff.kickoff import SimpleKickoff
 from plays.actions.jump import Jump, AirDodge, SpeedFlip
+from rlutilities.simulation import Input
 
+TRAINING = True # Set to True if using a training scenario
 
 class Primus(BaseAgent):
 
@@ -38,6 +40,10 @@ class Primus(BaseAgent):
         self.primus = self.state.cars[self.index]
 
     def get_output(self, packet: GameTickPacket):
+        if TRAINING and self.tick_counter < 20:
+            self.tick_counter += 1
+            return Input()
+
 
         # Start by updating the game's state
         self.state.read_packet(packet, self.get_field_info())
