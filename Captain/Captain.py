@@ -60,54 +60,21 @@ class Captain(BaseAgent):
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
+        # Handle the packet
         self.parse_packet(packet)
 
-        if not self.captain:
-            if self.action is not None:
-                self.action.step(self.info.time_delta)
-                self.controls = self.action.controls
+        # Check if our action needs to change
+        self.check_resets(packet)
 
-                return self.controls
+        # Choosing the action: only the captain decides
+        if self.captain:
+            my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
+            self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
 
-        # cancel action if a kickoff is happening and current action isn't a kickoff action
-        if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
-            self.action = None
-
-        if packet.game_info.is_kickoff_pause:
-            for index in self.team_actions:
-                if not isinstance(self.team_actions[index], Kickoff):
-                    self.team_actions[index] = None
-
-        # reset action when another car hits the ball
-        touch = packet.game_ball.latest_touch
-        if (touch.time_seconds > self.last_latest_touch_time and touch.player_name != packet.game_cars[self.index].name):
-            self.last_latest_touch_time = touch.time_seconds
-
-            # don't reset when we're dodging, wavedashing or recovering
-            if self.action and self.action.interruptible():
-                self.action = None
-
-        # choose action
-        if self.action is None:
-
-            if RENDERING:
-                self.draw.clear()
-            
-            if self.info.get_teammates(self.info.cars[self.index]):
-                self.action = teamplay_strategy.choose_action(self.info, self.info.cars[self.index])
-            else:
-                self.action = solo_strategy.choose_action(self.info, self.info.cars[self.index])
-
-        # iterate over cars, pick action for each, append to self.team_actions
-        my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
-        
-        self.team_actions = {index: solo_strategy.choose_action(self.info, self.info.cars[index]) for index in my_team}
-
-        self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
-
+        # Send / Receive TMCP messages
         self.handle_comms()
         
-        # execute action
+        # Execute action
         if self.action is not None:
             self.action.step(self.info.time_delta)
             self.controls = self.action.controls
@@ -118,9 +85,11 @@ class Captain(BaseAgent):
                 self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
                 self.action.render(self.draw)
 
-            # cancel maneuver when finished
-            if self.action.finished:
+            # cancel maneuver when finished if you're the captain. TODO: assign a default action to marujos
+            if self.action.finished and self.captain:
                 self.action = None
+            elif self.action.finished:
+                self.action = solo_strategy.choose_action(self.info, self.info.cars[self.index])
                 
         if RENDERING:
             self.draw.execute()
@@ -180,7 +149,7 @@ class Captain(BaseAgent):
                 success = False
                 message = None
 
-                if index in self.last_sent and self.last_sent[index] == self.team_actions[index]:
+                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
                     continue
 
                 if self.team_actions[index] == KICKOFF:
@@ -206,6 +175,7 @@ class Captain(BaseAgent):
 
                 if success:
                     self.last_sent[index] = self.team_actions[index]
+                    self.logger.info(str(self.index) + " just told " + str(index) + " to go " + str(self.team_actions[index]))
 
         # Check if there are new orders
         else:
@@ -215,6 +185,10 @@ class Captain(BaseAgent):
                     self.parse_message(message)
 
     def parse_message(self, message):
+        
+        if self.action != None:
+            return
+
         if message.action_type == ActionType.DEMO:
             self.logger.info("Got it, car " + str(self.index) + " is supposed to kick off!")
             self.action = kickoffs.choose_kickoff(self.info, self.info.cars[self.index])
@@ -224,3 +198,22 @@ class Captain(BaseAgent):
 
         elif message.action_type == ActionType.DEFEND:
             self.action = Recovery(self.info.cars[self.index])
+
+    def check_resets(self, packet):
+        # cancel action if a kickoff is happening and current action isn't a kickoff action
+        if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
+            self.action = None
+
+        if packet.game_info.is_kickoff_pause:
+            for index in self.team_actions:
+                if not isinstance(self.team_actions[index], Kickoff):
+                    self.team_actions[index] = None
+
+        # reset action when another car hits the ball
+        touch = packet.game_ball.latest_touch
+        if (touch.time_seconds > self.last_latest_touch_time and touch.player_name != packet.game_cars[self.index].name):
+            self.last_latest_touch_time = touch.time_seconds
+
+            # don't reset when we're dodging, wavedashing or recovering
+            if self.action and self.action.interruptible():
+                self.action = None

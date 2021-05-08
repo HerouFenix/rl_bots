@@ -38,7 +38,7 @@ def choose_action(info: GameInfo, my_car: Car, team):
 
 
     # kickoff
-    if True: #ball.position[0] == 0 and ball.position[1] == 0:
+    if ball.position[0] == 0 and ball.position[1] == 0:
         closest = min(distance(car, ball) for car in my_team)
 
         #if distance(my_car, ball) == min(distance(car, ball) for car in my_team):
@@ -52,6 +52,11 @@ def choose_action(info: GameInfo, my_car: Car, team):
                 assigned_actions[index] = GEN_DEFEND
 
         return assigned_actions
+
+    for index in team:
+        assigned_actions[index] = GEN_DEFEND
+
+    return assigned_actions
 
     ##
     info.predict_ball()
