@@ -9,7 +9,7 @@ from util.utilities import physics_object, Vector
 
 from action.kickoffs.kickoff import Kickoff
 from action.maneuver import Maneuver
-from policy import solo_strategy, teamplay_strategy, base_policy
+from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strategy
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
@@ -70,9 +70,6 @@ class Captain(BaseAgent):
         if self.captain:
             my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
             self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
-
-        # Send / Receive TMCP messages
-        self.handle_comms()
         
         # Execute action
         if self.action is not None:
@@ -85,14 +82,20 @@ class Captain(BaseAgent):
                 self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
                 self.action.render(self.draw)
 
-            # cancel maneuver when finished if you're the captain. TODO: assign a default action to marujos
-            if self.action.finished and self.captain:
-                self.action = None
-            elif self.action.finished:
-                self.action = solo_strategy.choose_action(self.info, self.info.cars[self.index])
+            # cancel maneuver when finished if you're the captain.
+            if self.action.finished:
+                if self.captain:
+                    self.action = None #marujo_strategy.choose_action(self.info, self.info.cars[self.index])
+                else:
+                    # TODO: Tell captain we're done? 
+                    # Assume a default gen def
+                    self.action = base_policy.general_defense(self.info, self.info.cars[self.index], clutch=False)
                 
         if RENDERING:
             self.draw.execute()
+
+        # Send / Receive TMCP messages
+        self.handle_comms()
 
         return self.controls
 
@@ -149,7 +152,7 @@ class Captain(BaseAgent):
                 success = False
                 message = None
 
-                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
+                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF and self.action != None:
                     continue
 
                 if self.team_actions[index] == KICKOFF:
@@ -199,11 +202,11 @@ class Captain(BaseAgent):
         elif message.action_type == ActionType.DEFEND:
             self.action = Recovery(self.info.cars[self.index])
 
+        print("My actions were updated")
+
+
     def check_resets(self, packet):
         # cancel action if a kickoff is happening and current action isn't a kickoff action
-        if packet.game_info.is_kickoff_pause and not isinstance(self.action, Kickoff):
-            self.action = None
-
         if packet.game_info.is_kickoff_pause:
             for index in self.team_actions:
                 if not isinstance(self.team_actions[index], Kickoff):
