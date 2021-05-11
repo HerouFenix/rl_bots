@@ -11,8 +11,9 @@ from plays import strategy
 from plays.play import Play
 from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
 from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
-from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike, SetupStrike
+from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike, SetupStrike, DribbleStrike
 from plays.strikes.aerial import AerialStrike, DoubleAerialStrike
+from plays.dribbles.dribble import Dribble
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
@@ -77,15 +78,21 @@ class Primus(BaseAgent):
 
             # Strikes
             self.state.predict_ball()
-            #self.play = Strike(self.primus, self.state, self.state.ball.position)
-            #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
-            #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
-            #self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
-            #self.play = SetupStrike(self.primus, self.state, self.state.ball.position)
-            #self.play = AerialStrike(self.primus, self.state, self.state.ball.position)
-            aerial = AerialStrike(self.primus, self.state, self.state.ball.position)
-            self.play = DoubleAerialStrike(aerial)
+            
+            #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
+            self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = BumpStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = CloseStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = SetupStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
 
+            #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+            #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = DoubleAerialStrike(aerial)
+            
+            # Dribble
+            #self.play = Dribble(self.primus, self.state.ball, self.state.enemy_net.center)
+                
             # Defense
 
         # If bot has picked a play, execute it
@@ -117,14 +124,22 @@ class Primus(BaseAgent):
 
                 # Strikes
                 self.state.predict_ball()
-                #self.play = Strike(self.primus, self.state, self.state.ball.position)
-                #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
-                #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
-                #self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
-                #self.play = SetupStrike(self.primus, self.state, self.state.ball.position)
-                self.play = AerialStrike(self.primus, self.state, self.state.ball.position)
-                #aerial = AerialStrike(self.primus, self.state, self.state.ball.position)
+                
+                #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
+                self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
+                #self.play = BumpStrike(self.primus, self.state, self.state.enemy_net.center)
+                #self.play = CloseStrike(self.primus, self.state, self.state.enemy_net.center)
+                #self.play = SetupStrike(self.primus, self.state, self.state.enemy_net.center)
+                
+                #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
+                
+                #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+                #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
                 #self.play = DoubleAerialStrike(aerial)
+
+
+                # Dribble
+                #self.play = Dribble(self.primus, self.state.ball, self.state.enemy_net.center)
                 
                 # Defense
         

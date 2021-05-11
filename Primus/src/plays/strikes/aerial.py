@@ -28,7 +28,7 @@ class AerialStrike(Strike):
         self.aerial.single_jump = not self.DOUBLE_JUMP
 
         super().__init__(agent, state, target)
-        self.arrive.allow_fancy_moves = False 
+        self.arrive.allow_fancy_moves = False  # Try enabling this (might mess up cus fancy moves may mess up the approach)
 
         self.flying = False
         self.flight_path = []

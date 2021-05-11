@@ -2,15 +2,17 @@ import math
 
 from plays.actions.drive import Arrive, Drive
 from plays.actions.jump import AimDodge
+from plays.dribbles.dribble import Dribble
 
 from plays.play import Play
 
+from rlutilities.mechanics import Dodge
 from rlutilities.linear_algebra import vec3, dot, norm, normalize, xy
 from rlutilities.simulation import Car, Ball, Field, sphere
 
 from util.game_info import GameInfo
 from util.intercept import Intercept
-from util.math import ground_distance, clamp, ground_direction, abs_clamp
+from util.math import distance, ground_distance, clamp, ground_direction, abs_clamp
 
 class Strike(Play):
     """
@@ -109,7 +111,11 @@ class DodgeStrike(Strike):
     JUMP_TIME_MULTIPLIER = 1.0
 
     def __init__(self, agent, state, target=None):
-        self.dodge = AimDodge(agent, 0.1, state.ball.position)
+        #self.dodge = AimDodge(agent, 0.1, state.ball.position)
+        self.dodge = Dodge(agent)
+        self.dodge.duration = 0.15
+        self.dodge.target = target
+        
         self.dodging = False
 
         super().__init__(agent, state, target)
@@ -139,7 +145,9 @@ class DodgeStrike(Strike):
         self.arrive.target = intercept.ground_pos - hit_dir * 165
         self.arrive.target_direction = hit_dir
 
-        self.dodge.jump.duration = self.get_jump_duration(ball.position[2])
+        #self.dodge.jump.duration = self.get_jump_duration(ball.position[2])
+        self.dodge.duration = self.get_jump_duration(ball.position[2])
+
         self.dodge.target = intercept.ball.position
         self.arrive.additional_shift = self.get_jump_duration(ball.position[2]) * 1000
 
@@ -150,7 +158,8 @@ class DodgeStrike(Strike):
         else:
             super().step(dt)
             if (
-                self.arrive.arrival_time - self.car.time < self.dodge.jump.duration + 0.13
+                #self.arrive.arrival_time - self.car.time < self.dodge.jump.duration + 0.13
+                self.arrive.arrival_time - self.car.time < self.dodge.duration + 0.13
                 and abs(self.arrive.drive.target_speed - norm(self.car.velocity)) < 1000
                 and (
                     dot(normalize(self.car.velocity), ground_direction(self.car, self.arrive.target)) > 0.95
@@ -237,3 +246,68 @@ class SetupStrike(DodgeStrike):
     def mirror_position(pos, wall_sgn):
         mirrored_x = 2 * 4096 * wall_sgn - pos[0]
         return vec3(mirrored_x, pos[1], pos[2])
+
+class DribbleStrike(Play):
+    """
+    TODO: IMPROVE THIS
+    Dribble the ball and then shoot it towards the goal when facing the target and fast enough, or when an opponent is close
+    """
+    def __init__(self, agent, state, target):
+        super().__init__(agent)
+
+        self.target = target
+        self.state = state
+
+        self.dribble = Dribble(agent, state.ball, target)
+        
+        self.shoot = Dodge(agent)
+        self.shoot.duration = 0.15
+        self.shoot.target = target
+
+        self.shooting = False
+
+        self.name = "DribbleStrike"
+
+    def interruptible(self):
+        return not self.shooting
+
+    def step(self, dt):
+        if not self.shooting:
+            self.name = "DribbleStrike (Dribble)"
+
+            # If not shooting, dribble
+            self.dribble.step(dt)
+            self.controls = self.dribble.controls
+            
+            self.finished = self.dribble.finished
+
+            car = self.car
+            ball = self.state.ball
+
+            # Check if we should shoot
+            dir_to_target = ground_direction(car, self.target)
+            if(
+                distance(car,ball) < 150
+                and ground_distance(car, ball) < 100
+                and dot(car.forward(), dir_to_target) > 0.7
+                and norm(car.velocity) > clamp(distance(car, self.target) / 3, 1000, 1700)
+                and dot(dir_to_target, ground_direction(car, ball)) > 0.9
+            ):
+                self.shooting = True
+
+            # Check if we should shoot cus an enemy is close
+            for opponent in self.state.get_opponents():
+                if(
+                   distance(opponent.position + opponent.velocity, car) < max(300.0, norm(opponent.velocity) * 0.5)
+                   and dot(opponent.velocity, direction(opponent, self.state.ball)) > 0.5   
+                ):
+                    if distance(car.position, self.state.ball.position) < 200:
+                        self.shooting = True
+                    else:
+                        self.shooting = True
+        
+        else:
+            self.name = "DribbleStrike (Shoot)"
+            self.shoot.step(dt)
+            self.controls = self.shoot.controls
+            self.finished = self.shoot.finished
