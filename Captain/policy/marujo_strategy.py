@@ -50,7 +50,10 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     if stance == CLEAR:
         return defense.any_clear(info, my_intercept.car)
 
-    return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+    if stance == DEFENSE:
+        return GeneralDefense(my_car, info, my_intercept.position, 7000)
+
+    return GeneralDefense(my_car, info, my_intercept.position, 4000)
 
     # if they can hit the ball sooner than me and they aren't out of position, wait in defense
     if (

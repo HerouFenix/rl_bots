@@ -37,6 +37,7 @@ def choose_stance(info: GameInfo, my_car: Car, team):
             else:
                 assigned_actions[index] = DEFENSE
 
+        print(assigned_actions)
         return assigned_actions
 
     # Interceptions
@@ -67,18 +68,16 @@ def choose_stance(info: GameInfo, my_car: Car, team):
                 assigned_actions[inter] = CLEAR
                 #return defense.any_clear(info, my_intercept.car)
 
-    banned_boostpads = {pad for pad in info.large_boost_pads if
-                        abs(pad.position[1] - their_goal[1]) < abs(my_intercept.position[1] - their_goal[1])
-                        or abs(pad.position[0] - my_car.position[0]) > 6000}
-
     # Otherwise just assign them to defense / boost depending on whether the ball is
     for index in team:
         if assigned_actions[index] == None:
-            refuel = Refuel(my_car, info) #, forbidden_pads=banned_boostpads)
-            if refuel.pad:
+            if info.cars[index].boost < 30:
                 assigned_actions[index] = BOOST
-            else:
-                assigned_actions[index] = DEFENSE
+
+    for index in team:
+        if min(my_team, key=lambda car: distance(car, my_goal)) is info.cars[index] and assigned_actions[index] == None:
+            assigned_actions[index] = DEFENSE
+
 
     return assigned_actions
 

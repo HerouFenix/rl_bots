@@ -49,7 +49,7 @@ class Captain(BaseAgent):
         self.car = None
 
         # Assume you're the captain, if you find an index lower than yours, adjust
-        self.captain = self.index == 0 or self.index == 2
+        self.captain = True
         self.allies = []
         self.enemies = []
         self.policy = None
@@ -151,11 +151,16 @@ class Captain(BaseAgent):
             for index in self.team_actions:
                 message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
 
+                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
+                    continue
+
                 if index == self.index:
                     self.stance = message.target
 
                 else:
-                    self.tmcp_handler.send(message)
+                    succ = self.tmcp_handler.send(message)
+                    if not succ:
+                        print("Failed to send message to", index)
 
                 self.last_sent[index] = self.team_actions[index]
 
