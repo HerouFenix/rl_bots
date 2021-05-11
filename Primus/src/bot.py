@@ -12,7 +12,7 @@ from plays.play import Play
 from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
 from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
 from plays.strikes.strike import DodgeStrike
-from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip
+from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
 TRAINING = False # Set to True if using a training scenario
@@ -60,6 +60,7 @@ class Primus(BaseAgent):
             #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
             #self.play = SpeedFlip(self.primus)
             #self.play = HalfFlip(self.primus)
+            self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
 
             # Drive
             #self.play = Drive(self.primus,target_speed=5000)
@@ -91,6 +92,7 @@ class Primus(BaseAgent):
                 #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
                 #self.play = SpeedFlip(self.primus)
                 #self.play = HalfFlip(self.primus)
+                self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
 
                 # Drive
                 #self.play = Drive(self.primus,target_speed=5000)

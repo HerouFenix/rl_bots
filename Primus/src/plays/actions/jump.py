@@ -1,6 +1,6 @@
 import math
 
-from rlutilities.linear_algebra import vec3,vec2, norm, dot, normalize, sgn
+from rlutilities.linear_algebra import vec3,vec2, norm, dot, normalize, sgn, look_at
 from rlutilities.simulation import Car
 from plays.play import Play
 from util.game_info import GameInfo
@@ -203,9 +203,9 @@ class AimDodge(AirDodge):
     Useful for dodging into the ball.
     """
 
-    def __init__(self, car, duration, target):
-        super().__init__(car, duration, target)
-        self.turn = AerialTurn(car)
+    def __init__(self, agent, duration, target):
+        super().__init__(agent, duration, target)
+        self.turn = AerialTurn(agent)
 
         self.name = "AimDodge"
 
@@ -219,7 +219,7 @@ class AimDodge(AirDodge):
             up = normalize(up)
             self.turn.target = look_at(target_direction, up)
             self.turn.step(dt)
-            
+
             self.controls.pitch = self.turn.controls.pitch
             self.controls.yaw = self.turn.controls.yaw
             self.controls.roll = self.turn.controls.roll
