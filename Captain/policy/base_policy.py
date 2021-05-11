@@ -157,7 +157,6 @@ def choose_action(info: GameInfo, my_car: Car, team):
     return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
 
 def general_defense(info, my_car, clutch=False):
-
     my_goal = ground(info.my_goal.center)
     their_goal = ground(info.their_goal.center)
 
@@ -179,3 +178,5 @@ def general_defense(info, my_car, clutch=False):
         if align(my_car.position, my_intercept.ball, their_goal) > 0.5:
             return offense.any_shot(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
         return defense.any_clear(info, my_intercept.car)
+
+    return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)

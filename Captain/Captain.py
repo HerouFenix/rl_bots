@@ -1,3 +1,5 @@
+from typing import List
+
 from rlbot.agents.base_agent import BaseAgent, GameTickPacket, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 
@@ -29,6 +31,9 @@ except:
     quit()
 
 RENDERING = True
+ATTACK = 0
+DEFENSE = 1
+BOOST = 2
 
 class Captain(BaseAgent):
     def __init__(self, name, team, index):
@@ -57,6 +62,7 @@ class Captain(BaseAgent):
         # Team actions {index: Action Macro}
         self.team_actions = {}
         self.last_sent = {}
+        self.stance = None
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
@@ -82,14 +88,13 @@ class Captain(BaseAgent):
                 self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
                 self.action.render(self.draw)
 
-            # cancel maneuver when finished if you're the captain.
-            if self.action.finished:
+            # When you're finished with the action or if it has been cancelled, reconsider team strategy
+            if self.action.finished or self.action == None:
                 if self.captain:
-                    self.action = None #marujo_strategy.choose_action(self.info, self.info.cars[self.index])
-                else:
-                    # TODO: Tell captain we're done? 
-                    # Assume a default gen def
-                    self.action = base_policy.general_defense(self.info, self.info.cars[self.index], clutch=False)
+                    self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
+
+                # Pick action according to previous orders
+                self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
                 
         if RENDERING:
             self.draw.execute()
@@ -152,7 +157,8 @@ class Captain(BaseAgent):
                 success = False
                 message = None
 
-                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF and self.action != None:
+                # If the last message was Kick-off we need to repeat it a couple of times due to Captain roles still being negotiated
+                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
                     continue
 
                 if self.team_actions[index] == KICKOFF:
@@ -178,7 +184,6 @@ class Captain(BaseAgent):
 
                 if success:
                     self.last_sent[index] = self.team_actions[index]
-                    self.logger.info(str(self.index) + " just told " + str(index) + " to go " + str(self.team_actions[index]))
 
         # Check if there are new orders
         else:
@@ -188,8 +193,10 @@ class Captain(BaseAgent):
                     self.parse_message(message)
 
     def parse_message(self, message):
-        
-        if self.action != None:
+        """ Converts a message into actions
+            Only update action if the current one is interruptible
+        """
+        if self.action != None and not self.action.interruptible():
             return
 
         if message.action_type == ActionType.DEMO:
@@ -201,8 +208,6 @@ class Captain(BaseAgent):
 
         elif message.action_type == ActionType.DEFEND:
             self.action = Recovery(self.info.cars[self.index])
-
-        print("My actions were updated")
 
 
     def check_resets(self, packet):
