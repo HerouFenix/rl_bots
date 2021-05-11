@@ -6,7 +6,7 @@ from plays.actions.jump import AimDodge
 from plays.play import Play
 
 from rlutilities.linear_algebra import vec3, dot, norm, normalize, xy
-from rlutilities.simulation import Car, Ball
+from rlutilities.simulation import Car, Ball, Field, sphere
 
 from util.game_info import GameInfo
 from util.intercept import Intercept
@@ -50,6 +50,7 @@ class Strike(Play):
         self.arrive.backwards = self.should_strike_backwards
 
     def intercept_predicate(self, car, ball):
+        # This basically returns whether Primus should move to intercept or stay put
         return True
 
     def update_intercept(self):
@@ -95,7 +96,7 @@ class Strike(Play):
 
 class DodgeStrike(Strike):
     """
-    Strike by dodging (double jumping) into the ball
+    Strike by dodging (front flipping) into the ball
     """
 
     ALLOW_BACKWARDS = False
@@ -154,3 +155,33 @@ class DodgeStrike(Strike):
 
         if self.dodge.finished:
             self.finished = True
+
+class BumpStrike(Strike):
+    """
+    Strike by bumping (driving into) the ball
+    Simplest kind of strike. Similar to a clear, but the car only moves in to strike the ball if its not too far away and in the car's direction
+    """
+
+    MAX_DISTANCE_FROM_WALL = 120
+
+    def __init__(self, agent, state, target=None):
+        super().__init__(agent, state, target)
+
+        self.name = "BumpStrike"
+
+    def intercept_predicate(self, car, ball):
+        # If ball is too in the air or too far forward return false
+        if ball.position[2] > 200 or abs(ball.position[1]) > 5120 - 100:
+            return False
+        contact_ray = Field.collide(sphere(ball.position, self.MAX_DISTANCE_FROM_WALL))
+
+        # Only go for the ball if its infront of us and not too far away
+        return norm(contact_ray.start) > 0 and abs(dot(ball.velocity, contact_ray.direction)) < 300
+
+    def configure(self, intercept):
+        target_direction = ground_direction(intercept, self.target)
+        strike_direction = ground_direction(intercept.ball.velocity, target_direction * 4000)
+
+        self.arrive.target = intercept.position - strike_direction * 105
+        self.arrive.target_direction = strike_direction
+        self.arrive.arrival_time = intercept.time
