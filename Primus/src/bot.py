@@ -75,8 +75,8 @@ class Primus(BaseAgent):
 
             # Strikes
             self.state.predict_ball()
-            self.play = Strike(self.primus, self.state, self.state.ball.position)
-            #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
+            #self.play = Strike(self.primus, self.state, self.state.ball.position)
+            self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
 
             # Defense
 
@@ -109,8 +109,8 @@ class Primus(BaseAgent):
 
                 # Strikes
                 self.state.predict_ball()
-                self.play = Strike(self.primus, self.state, self.state.ball.position)
-                #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
+                #self.play = Strike(self.primus, self.state, self.state.ball.position)
+                self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
 
                 # Defense
         

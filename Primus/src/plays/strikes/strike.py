@@ -5,12 +5,12 @@ from plays.actions.jump import AimDodge
 
 from plays.play import Play
 
-from rlutilities.linear_algebra import vec3, dot
+from rlutilities.linear_algebra import vec3, dot, norm, normalize, xy
 from rlutilities.simulation import Car, Ball
 
 from util.game_info import GameInfo
 from util.intercept import Intercept
-from util.math import ground_distance, clamp
+from util.math import ground_distance, clamp, ground_direction
 
 class Strike(Play):
     """
@@ -102,10 +102,12 @@ class DodgeStrike(Strike):
     JUMP_TIME_MULTIPLIER = 1.0
 
     def __init__(self, agent, state, target=None):
-        super().__init__(agent, state, target)
-        
         self.dodge = AimDodge(agent, 0.1, state.ball.position)
         self.dodging = False
+
+        super().__init__(agent, state, target)
+
+        self.name = "DodgeStrike"
 
     def interruptible(self):
         if self.state.ball.position[2] > 150 and self.dodging:
