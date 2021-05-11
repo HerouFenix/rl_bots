@@ -11,7 +11,7 @@ from plays import strategy
 from plays.play import Play
 from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
 from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
-from plays.strikes.strike import Strike, DodgeStrike, BumpStrike
+from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
@@ -77,7 +77,8 @@ class Primus(BaseAgent):
             self.state.predict_ball()
             #self.play = Strike(self.primus, self.state, self.state.ball.position)
             #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
-            self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
+            #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
+            self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
 
             # Defense
 
@@ -112,7 +113,8 @@ class Primus(BaseAgent):
                 self.state.predict_ball()
                 #self.play = Strike(self.primus, self.state, self.state.ball.position)
                 #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
-                self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
+                #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
+                self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
 
                 # Defense
         

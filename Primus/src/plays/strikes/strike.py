@@ -10,7 +10,7 @@ from rlutilities.simulation import Car, Ball, Field, sphere
 
 from util.game_info import GameInfo
 from util.intercept import Intercept
-from util.math import ground_distance, clamp, ground_direction
+from util.math import ground_distance, clamp, ground_direction, abs_clamp
 
 class Strike(Play):
     """
@@ -45,6 +45,7 @@ class Strike(Play):
         return self.arrive.interruptible()
 
     def configure(self, intercept):
+        # Configure the movement settings for the strike such as the Arrive settings and the Target
         self.arrive.target = intercept.ground_pos
         self.arrive.arrival_time = intercept.time
         self.arrive.backwards = self.should_strike_backwards
@@ -54,6 +55,7 @@ class Strike(Play):
         return True
 
     def update_intercept(self):
+        # Update Intercept class based on the updated ball predictions
         self.intercept = Intercept(self.car, self.state.ball_predictions, self.intercept_predicate)
 
         if self.ALLOW_BACKWARDS:
@@ -71,10 +73,14 @@ class Strike(Play):
             self.finished = True
 
     def pick_easiest_target(self, car, ball, targets):
+        # Pick the easiest target (between the ball and the given targets, be them cars or ball predictions)
+        
         to_goal = ground_direction(ball, self.state.enemy_net.center)
         return max(targets, key=lambda target: dot(ground_direction(car, ball) + to_goal * 0.5, ground_direction(ball, target)))
 
     def step(self, dt):
+        # Update controls/what to do
+
         if (
             self.last_update_time + self.UPDATE_INTERVAL < self.car.time < self.intercept.time - self.STOP_UPDATING
             and self.car.on_ground and not self.controls.jump
@@ -185,3 +191,24 @@ class BumpStrike(Strike):
         self.arrive.target = intercept.position - strike_direction * 105
         self.arrive.target_direction = strike_direction
         self.arrive.arrival_time = intercept.time
+
+class CloseStrike(DodgeStrike):
+    """
+    Variant of the DodgeStrike used to shoot at the goal when the intercept is near the enemy net
+    Changes where Primus aims. Rather than aiming at the center of the net, it aims at the position within the net that is closest to the ball
+    """
+
+    JUMP_TIME_MULTIPLIER = 1.1
+
+    def __init__(self, agent, state, target=None):
+        super().__init__(agent, state, target)
+
+        self.name = "CloseStrike"
+
+    def intercept_predicate(self, car, ball):
+        return ball.position[2] < 250
+
+    def configure(self, intercept):
+        self.target[0] = abs_clamp(self.intercept.ground_pos[0], 300)
+
+        super().configure(intercept)
