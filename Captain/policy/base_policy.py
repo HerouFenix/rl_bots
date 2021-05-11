@@ -10,7 +10,7 @@ from tools.intercept import Intercept
 from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction, distance
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR
 
 
 def choose_stance(info: GameInfo, my_car: Car, team):
@@ -26,14 +26,11 @@ def choose_stance(info: GameInfo, my_car: Car, team):
 
     assigned_actions = {index: None for index in team}
 
-    # kickoff
+    # Kickoff
     if ball.position[0] == 0 and ball.position[1] == 0:
         closest = min(distance(car, ball) for car in my_team)
 
-        #if distance(my_car, ball) == min(distance(car, ball) for car in my_team):
-            #return kickoffs.choose_kickoff(info, my_car)
-
-        # find nearest element to go for kickoff, every other one is assigned to general defense
+        # Find nearest element to go for kickoff, every other one is assigned to general defense
         for index in team:
             if distance(info.cars[index], ball) == closest:
                 assigned_actions[index] = KICKOFF
@@ -42,8 +39,46 @@ def choose_stance(info: GameInfo, my_car: Car, team):
 
         return assigned_actions
 
+    # Interceptions
+    my_intercept = Intercept(my_car, info.ball_predictions)
+    teammates_intercepts = [Intercept(mate, info.ball_predictions) for mate in teammates]
+    our_intercepts = {index: Intercept(info.cars[index], info.ball_predictions) for index in team}
+
+    good_intercepts = [our_intercepts[i] for i in our_intercepts if align(our_intercepts[i].car.position, our_intercepts[i].ball, their_goal) > 0.0]
+    if good_intercepts:
+        best_intercept = min(good_intercepts, key=lambda intercept: intercept.time)
+    else:
+        best_intercept = min(our_intercepts.values(), key=lambda i: distance(i.car, my_goal))
+        if ground_distance(my_car, my_goal) < 2000:
+            best_intercept = my_intercept
+
+    for inter in our_intercepts:
+        if best_intercept == our_intercepts[inter]:
+            # if not completely out of position, go for a shot
+            if (
+                align(best_intercept.car.position, best_intercept.ball, their_goal) > 0
+                or ground_distance(best_intercept, my_goal) > 6000
+            ):
+                assigned_actions[inter] = ATTACK
+                #return offense.any_shot(info, my_intercept.car, their_goal, my_intercept)
+
+            # otherwise try to clear
+            else:
+                assigned_actions[inter] = CLEAR
+                #return defense.any_clear(info, my_intercept.car)
+
+    banned_boostpads = {pad for pad in info.large_boost_pads if
+                        abs(pad.position[1] - their_goal[1]) < abs(my_intercept.position[1] - their_goal[1])
+                        or abs(pad.position[0] - my_car.position[0]) > 6000}
+
+    # Otherwise just assign them to defense / boost depending on whether the ball is
     for index in team:
-        assigned_actions[index] = DEFENSE
+        if assigned_actions[index] == None:
+            refuel = Refuel(my_car, info) #, forbidden_pads=banned_boostpads)
+            if refuel.pad:
+                assigned_actions[index] = BOOST
+            else:
+                assigned_actions[index] = DEFENSE
 
     return assigned_actions
 

@@ -10,7 +10,7 @@ from tools.intercept import Intercept
 from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR
 
 def choose_action(info: GameInfo, my_car: Car, stance):
     ball = info.ball
@@ -26,8 +26,6 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     if stance == KICKOFF:
         return kickoffs.choose_kickoff(info, my_car)
 
-
-
     info.predict_ball()
 
     my_intercept = Intercept(my_car, info.ball_predictions)
@@ -40,30 +38,18 @@ def choose_action(info: GameInfo, my_car: Car, stance):
                         or abs(pad.position[0] - my_car.position[0]) > 6000}
 
 
-    # # if ball is in a dangerous position, clear it
-    # # if the ball is or is going to be in a dangerous position
-    # if (
-    #     ground_distance(my_intercept, my_goal) < 3000
-    #     and (abs(my_intercept.position[0]) < 2000 or abs(my_intercept.position[1]) < 4500)
-    #     and my_car.position[2] < 300
-    # ):
-    #     if align(my_car.position, my_intercept.ball, their_goal) > 0.5:
-    #         return offense.any_shot(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
-    #     return defense.any_clear(info, my_intercept.car)
-
-    # # if I'm low on boost and the ball is not near my goal, go for boost
-    # # if i'm near a boost, the ball is not near my goal and i'm low
-    # if my_car.boost < 10 and ground_distance(my_intercept, their_goal) > 3000:
-    #     refuel = Refuel(my_car, info, forbidden_pads=banned_boostpads)
-    #     if refuel.pad: return refuel
-
     ball_in_their_half = abs(my_intercept.position[1] - their_goal[1]) < 3000
     shadow_distance = 4000 if ball_in_their_half else 6000
 
-    if stance == DEFENSE:
-        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+    if stance == BOOST:
+        return Refuel(my_car, info, forbidden_pads=banned_boostpads)
 
-    print("falling back", stance)
+    if stance == ATTACK:
+        return offense.any_shot(info, my_intercept.car, their_goal, my_intercept)
+
+    if stance == CLEAR:
+        return defense.any_clear(info, my_intercept.car)
+
     return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
 
     # if they can hit the ball sooner than me and they aren't out of position, wait in defense

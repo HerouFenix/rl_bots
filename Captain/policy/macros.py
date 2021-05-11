@@ -2,6 +2,8 @@
 ATTACK = 0
 DEFENSE = 1
 BOOST = 2
+CLEAR = 3
+UNDEFINED = -404
 
 # Messages
 ACK = -1

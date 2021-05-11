@@ -15,7 +15,7 @@ from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strateg
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, UNDEFINED
 from policy import offense, defense, kickoffs
 
 from action.recovery import Recovery
@@ -59,7 +59,7 @@ class Captain(BaseAgent):
         # Team actions {index: Stance}
         self.team_actions = {}
         self.last_sent = {}
-        self.stance = -404
+        self.stance = UNDEFINED
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
@@ -77,6 +77,14 @@ class Captain(BaseAgent):
         # Send / Receive TMCP messages
         self.handle_comms()
 
+        # When you're finished with the action or if it has been cancelled, reconsider team strategy
+        if self.action == None or self.action.finished:
+            if self.captain:
+                self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
+
+            # Pick action according to previous orders
+            self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
+
         # Execute action
         if self.action is not None:
             self.action.step(self.info.time_delta)
@@ -87,14 +95,6 @@ class Captain(BaseAgent):
                 self.draw.color(self.draw.yellow)
                 self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
                 self.action.render(self.draw)
-
-        # When you're finished with the action or if it has been cancelled, reconsider team strategy
-        if self.action == None or self.action.finished:
-            if self.captain:
-                self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
-
-            # Pick action according to previous orders
-            self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
                 
         if RENDERING:
             self.draw.execute()
@@ -170,11 +170,9 @@ class Captain(BaseAgent):
                 for message in new_messages:
                     # If the incoming order is None, we keep the previous stance
                     if message.index == self.index:
-                        if self.stance != message.target:
-                            print(self.index, self.stance, message.target)
                         self.stance = message.target
 
-                if self.stance != -404:
+                if self.stance != UNDEFINED:
                     break
 
     def check_resets(self, packet):
@@ -186,3 +184,7 @@ class Captain(BaseAgent):
             # don't reset when we're dodging, wavedashing or recovering
             if self.action and self.action.interruptible():
                 self.action = None
+                return True
+
+        return False
+
