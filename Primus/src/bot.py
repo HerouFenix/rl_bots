@@ -9,12 +9,13 @@ from plays import strategy
 
 # USED JUST FOR TESTING PURPOSES - COMMENT AFTER
 from plays.play import Play
-from plays.actions.drive import Drive, Stop
-from plays.kickoff.kickoff import SimpleKickoff
-from plays.actions.jump import Jump, AirDodge, SpeedFlip
+from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
+from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
+from plays.strikes.strike import DodgeStrike
+from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip
 from rlutilities.simulation import Input
 
-TRAINING = True # Set to True if using a training scenario
+TRAINING = False # Set to True if using a training scenario
 
 class Primus(BaseAgent):
 
@@ -51,23 +52,60 @@ class Primus(BaseAgent):
         # If the bot is not attempting to do anything
         if self.play is None:
             # Get a play to execute
-            self.play = strategy.choose_play(self.state, self.primus)
-            
-            #self.play = SimpleKickoff(self.primus, self.state)
+            #self.play = strategy.choose_play(self.state, self.primus)
+
+            """Test individual moves"""
+            # Jumps
+            #self.play = Jump(self.primus, 1.0)
             #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
             #self.play = SpeedFlip(self.primus)
-            
+            #self.play = HalfFlip(self.primus)
+
+            # Drive
+            #self.play = Drive(self.primus,target_speed=5000)
+            #self.play = AdvancedDrive(self.primus, self.state.ball.position)
+            #self.play = Arrive(self.primus, arrival_time = 20.0)
+            #self.play = Stop(self.primus)
+
+            # Kickoffs
+            #self.play = SimpleKickoff(self.primus, self.state)
+            #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
+
+            # Strikes
+            #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
+
+            # Defense
+
         # If bot has picked a play, execute it
         if self.play is not None:
             self.play.step(self.state.time_delta)
             self.controls = self.play.controls
 
             if(self.play.finished): # If the bot finished its play
-                self.play = strategy.choose_play(self.state, self.primus) #Pick new play
-               
-                #self.play = Stop(self.primus)
+                # Get a play to execute
+                #self.play = strategy.choose_play(self.state, self.primus) #Pick new play
+                
+                """Test individual moves"""
+                # Jumps
+                #self.play = Jump(self.primus, 1.0)
                 #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
+                #self.play = SpeedFlip(self.primus)
+                #self.play = HalfFlip(self.primus)
+
+                # Drive
+                #self.play = Drive(self.primus,target_speed=5000)
+                #self.play = AdvancedDrive(self.primus, self.state.ball.position)
+                #self.play = Arrive(self.primus, arrival_time = 20.0)
                 #self.play = Stop(self.primus)
+
+                # Kickoffs
+                #self.play = SimpleKickoff(self.primus, self.state)
+                #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
+
+                # Strikes
+                #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
+
+                # Defense
         
         # Draw play name
         self.renderer.draw_string_3d(self.primus.position + vec3(0,0,10), 2, 2, self.play.name, self.renderer.white())

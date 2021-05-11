@@ -1,9 +1,11 @@
 import math
 
-from rlutilities.linear_algebra import vec3, norm, dot, normalize, sgn
+from rlutilities.linear_algebra import vec3,vec2, norm, dot, normalize, sgn
 from rlutilities.simulation import Car
 from plays.play import Play
 from util.game_info import GameInfo
+
+from rlutilities.mechanics import Dodge, AerialTurn
 
 from util.math import ground, local, ground_distance, distance, direction, abs_clamp, clamp11
 
@@ -95,6 +97,8 @@ class AirDodge(Play):
         self.finished = self.jump.finished and self.state_timer > recovery_time and self.phase >= 6
 
 class SpeedFlip(Play):
+
+
     """
     https://www.google.com/search?client=firefox-b-d&q=rocket+league+speed+flip#kpvalbx=__lWVYMfTHY64UqTuvsgN22
     """
@@ -145,3 +149,77 @@ class SpeedFlip(Play):
         self.timer += dt
 
         self.finished = (self.timer > self.TIMEOUT) or (self.car.on_ground and self.timer > 0.5)
+
+class HalfFlip(Play):
+    """
+    https://www.youtube.com/watch?v=V_4ajUfCVq4 
+    """
+    
+    def __init__(self, agent, use_boost = False):
+        super().__init__(agent)
+
+        self.dodge = Dodge(agent)
+        self.dodge.duration = 0.12
+        self.dodge.direction = vec2(agent.forward() * -1.0)
+
+        self.s = 0.95 * sgn(dot(self.car.angular_velocity, self.car.up()) + 0.01)
+        self.timer = 0.0
+
+        self.use_boost = use_boost
+
+        self.name = "HalfFlip"
+
+    def step(self, dt):
+        boost_delay = 0.4
+        stall_start = 0.50
+        stall_end = 0.70
+        timeout = 2.0
+
+        self.dodge.step(dt)
+        self.controls = self.dodge.controls
+
+        if stall_start < self.timer < stall_end:
+            self.controls.roll = 0.0
+            self.controls.pitch = -1.0
+            self.controls.yaw = 0.0
+        
+        if self.timer > stall_end:
+            self.controls.roll = self.s
+            self.controls.pitch = -1.0
+            self.controls.yaw = self.s
+
+        if self.use_boost and self.timer > boost_delay:
+            self.controls.boost = 1
+        else:
+            self.controls.boost = 0
+
+        self.timer += dt
+
+        self.finished = (self.timer > timeout) or (self.car.on_ground and self.timer > 0.5)
+
+class AimDodge(AirDodge):
+    """
+    Dodge after turning the car towards the target.
+    Useful for dodging into the ball.
+    """
+
+    def __init__(self, car, duration, target):
+        super().__init__(car, duration, target)
+        self.turn = AerialTurn(car)
+
+        self.name = "AimDodge"
+
+    def step(self, dt):
+        super().step(dt)
+
+        if not self.jump.finished and not self.car.on_ground:
+            target_direction = direction(self.car, self.target + vec3(0, 0, 200))
+            up = target_direction * -1
+            up[2] = 1
+            up = normalize(up)
+            self.turn.target = look_at(target_direction, up)
+            self.turn.step(dt)
+            
+            self.controls.pitch = self.turn.controls.pitch
+            self.controls.yaw = self.turn.controls.yaw
+            self.controls.roll = self.turn.controls.roll

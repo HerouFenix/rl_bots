@@ -41,7 +41,8 @@ class SimpleKickoff(Kickoff):
         super().__init__(agent, state)
         self.drive.target_pos = vec3(0, sgn(state.net.center[1]) * 100, 0)
 
-        self.interruptible = True #Will be true if action is drive, so phase 0 and phase 2
+    def interruptible(self):
+        return self.action is self.drive
 
     def step(self, dt):
         # Drive
@@ -57,7 +58,6 @@ class SimpleKickoff(Kickoff):
             
             if self.car.on_ground and self.action.finished:
                 self.action = self.drive
-                self.interruptible = True
                 self.phase = 2
             
         # Drive
