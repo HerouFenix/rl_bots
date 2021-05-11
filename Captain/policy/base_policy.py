@@ -10,16 +10,12 @@ from tools.intercept import Intercept
 from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction, distance
 
-ACK = -1
-KICKOFF = -2
-GEN_DEFEND = -3
-CLUTCH_DEFEND = -4
-BALL = -5
-RECOVERY = -6
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST
 
 
-def choose_action(info: GameInfo, my_car: Car, team):
-    """ Choose actions for every car in the team?
+def choose_stance(info: GameInfo, my_car: Car, team):
+    """ High level assignment of "stances"
+        Upon entering a stance, each Marujo is able to decide a few things to do
     """
     ball = info.ball
     teammates = info.get_teammates(my_car)
@@ -29,13 +25,6 @@ def choose_action(info: GameInfo, my_car: Car, team):
     opponents = info.get_opponents()
 
     assigned_actions = {index: None for index in team}
-
-
-    # recovery
-    for index in team:
-        if not info.cars[index].on_ground:
-            assigned_actions[index] = RECOVERY #Recovery(my_car)
-
 
     # kickoff
     if ball.position[0] == 0 and ball.position[1] == 0:
@@ -49,12 +38,12 @@ def choose_action(info: GameInfo, my_car: Car, team):
             if distance(info.cars[index], ball) == closest:
                 assigned_actions[index] = KICKOFF
             else:
-                assigned_actions[index] = GEN_DEFEND
+                assigned_actions[index] = DEFENSE
 
         return assigned_actions
 
     for index in team:
-        assigned_actions[index] = GEN_DEFEND
+        assigned_actions[index] = DEFENSE
 
     return assigned_actions
 

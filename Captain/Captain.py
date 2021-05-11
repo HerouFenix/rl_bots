@@ -15,7 +15,7 @@ from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strateg
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
-from policy.base_policy import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST
 from policy import offense, defense, kickoffs
 
 from action.recovery import Recovery
@@ -31,14 +31,11 @@ except:
     quit()
 
 RENDERING = True
-ATTACK = 0
-DEFENSE = 1
-BOOST = 2
+
 
 class Captain(BaseAgent):
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
-        # Initializing general stuff here
 
     def initialize_agent(self):
 
@@ -52,17 +49,17 @@ class Captain(BaseAgent):
         self.car = None
 
         # Assume you're the captain, if you find an index lower than yours, adjust
-        self.captain = True
+        self.captain = self.index == 0 or self.index == 2
         self.allies = []
         self.enemies = []
         self.policy = None
         self.action = None
         self.controls = SimpleControllerState()
 
-        # Team actions {index: Action Macro}
+        # Team actions {index: Stance}
         self.team_actions = {}
         self.last_sent = {}
-        self.stance = None
+        self.stance = -404
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
@@ -75,8 +72,11 @@ class Captain(BaseAgent):
         # Choosing the action: only the captain decides
         if self.captain:
             my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
-            self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
+            self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
         
+        # Send / Receive TMCP messages
+        self.handle_comms()
+
         # Execute action
         if self.action is not None:
             self.action.step(self.info.time_delta)
@@ -88,19 +88,17 @@ class Captain(BaseAgent):
                 self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
                 self.action.render(self.draw)
 
-            # When you're finished with the action or if it has been cancelled, reconsider team strategy
-            if self.action.finished or self.action == None:
-                if self.captain:
-                    self.team_actions = base_policy.choose_action(self.info, self.info.cars[self.index], my_team)
+        # When you're finished with the action or if it has been cancelled, reconsider team strategy
+        if self.action == None or self.action.finished:
+            if self.captain:
+                self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
 
-                # Pick action according to previous orders
-                self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
+            # Pick action according to previous orders
+            self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
                 
         if RENDERING:
             self.draw.execute()
 
-        # Send / Receive TMCP messages
-        self.handle_comms()
 
         return self.controls
 
@@ -145,78 +143,41 @@ class Captain(BaseAgent):
             Marujos read messages, captains send them. (general rule)
             TMCP only supports a pre-defined set of messages, so we will be adding a few by changing certain parameters.
             Also, the original implementation of TMCP does not support targeted messages, only broadcasts. So we are going to instance the message and replace
-            the index of the sender with the index of the receiver.
+            the index of the sender with the index of the desired receiver.
         """
-
-        # Receive and parse all new matchcomms messages into TMCPMessage objects.
-        new_messages: List[TMCPMessage] = self.tmcp_handler.recv()
 
         # Decide what to do with your mateys
         if self.captain:
             for index in self.team_actions:
-                success = False
-                message = None
-
-                # If the last message was Kick-off we need to repeat it a couple of times due to Captain roles still being negotiated
-                if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
-                    continue
-
-                if self.team_actions[index] == KICKOFF:
-                    message = TMCPMessage.demo_action(self.team, index, -1)
-
-                elif self.team_actions[index] == GEN_DEFEND:
-                    message = TMCPMessage.boost_action(self.team, index, GEN_DEFEND)
-
-                elif self.team_actions[index] == CLUTCH_DEFEND:
-                    message = TMCPMessage.boost_action(self.team, index, CLUTCH_DEFEND)
-
-                elif self.team_actions[index] == BALL:
-                    message = TMCPMessage.ball_action(self.team, index)
-
-                elif self.team_actions[index] == RECOVERY:
-                    message = TMCPMessage.defend_action(self.team, index)
-
+                message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
 
                 if index == self.index:
-                    self.parse_message(message)
+                    self.stance = message.target
 
-                success = self.tmcp_handler.send(message)
+                else:
+                    self.tmcp_handler.send(message)
 
-                if success:
-                    self.last_sent[index] = self.team_actions[index]
+                self.last_sent[index] = self.team_actions[index]
+
 
         # Check if there are new orders
         else:
-            # Handle TMCPMessages.
-            for message in new_messages:
-                if message.index == self.index:
-                    self.parse_message(message)
+            # Receive and parse all new matchcomms messages into TMCPMessage objects.
+            while True:
+                new_messages: List[TMCPMessage] = self.tmcp_handler.recv()
 
-    def parse_message(self, message):
-        """ Converts a message into actions
-            Only update action if the current one is interruptible
-        """
-        if self.action != None and not self.action.interruptible():
-            return
+                # Handle TMCPMessages, which for marujos is pretty much just updating stance.
+                for message in new_messages:
+                    # If the incoming order is None, we keep the previous stance
+                    if message.index == self.index:
+                        if self.stance != message.target:
+                            print(self.index, self.stance, message.target)
+                        self.stance = message.target
 
-        if message.action_type == ActionType.DEMO:
-            self.logger.info("Got it, car " + str(self.index) + " is supposed to kick off!")
-            self.action = kickoffs.choose_kickoff(self.info, self.info.cars[self.index])
-
-        elif message.action_type == ActionType.BOOST:
-            self.action = base_policy.general_defense(self.info, self.info.cars[self.index], clutch=(message.target == CLUTCH_DEFEND))
-
-        elif message.action_type == ActionType.DEFEND:
-            self.action = Recovery(self.info.cars[self.index])
-
+                if self.stance != -404:
+                    break
 
     def check_resets(self, packet):
-        # cancel action if a kickoff is happening and current action isn't a kickoff action
-        if packet.game_info.is_kickoff_pause:
-            for index in self.team_actions:
-                if not isinstance(self.team_actions[index], Kickoff):
-                    self.team_actions[index] = None
-
         # reset action when another car hits the ball
         touch = packet.game_ball.latest_touch
         if (touch.time_seconds > self.last_latest_touch_time and touch.player_name != packet.game_cars[self.index].name):
