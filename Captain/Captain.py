@@ -149,12 +149,15 @@ class Captain(BaseAgent):
         # Decide what to do with your mateys
         if self.captain:
             for index in self.team_actions:
-                message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
-
                 if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
                     continue
+                
+                message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
+
 
                 if index == self.index:
+                    if self.stance != message.target:
+                        print("Old stance of ", self.index, "was", self.stance, "but now is", message.target)
                     self.stance = message.target
 
                 else:

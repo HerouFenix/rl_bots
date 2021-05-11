@@ -75,7 +75,7 @@ def choose_stance(info: GameInfo, my_car: Car, team):
                 assigned_actions[index] = BOOST
 
     for index in team:
-        if min(my_team, key=lambda car: distance(car, my_goal)) is info.cars[index] and assigned_actions[index] == None:
+        if assigned_actions[index] == None:
             assigned_actions[index] = DEFENSE
 
 
