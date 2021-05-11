@@ -14,5 +14,5 @@ class Play:
         # Current step in the play's execution - To be implemented in each implementation of Play
         pass
 
-    def interruptible():
+    def interruptible(self):
         return False # Whether or not the play can be interrupted

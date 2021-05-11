@@ -11,11 +11,12 @@ from plays import strategy
 from plays.play import Play
 from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
 from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
-from plays.strikes.strike import DodgeStrike
+from plays.strikes.strike import Strike, DodgeStrike
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
 TRAINING = False # Set to True if using a training scenario
+DRAW_BALL_PREDICTIONS = False # Set to True if you want to show the ball prediction lines
 
 class Primus(BaseAgent):
 
@@ -60,7 +61,7 @@ class Primus(BaseAgent):
             #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
             #self.play = SpeedFlip(self.primus)
             #self.play = HalfFlip(self.primus)
-            self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
+            #self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
 
             # Drive
             #self.play = Drive(self.primus,target_speed=5000)
@@ -73,6 +74,8 @@ class Primus(BaseAgent):
             #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
 
             # Strikes
+            self.state.predict_ball()
+            self.play = Strike(self.primus, self.state, self.state.ball.position)
             #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
 
             # Defense
@@ -92,7 +95,7 @@ class Primus(BaseAgent):
                 #self.play = AirDodge(self.primus, 0.1,self.state.ball.position)
                 #self.play = SpeedFlip(self.primus)
                 #self.play = HalfFlip(self.primus)
-                self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
+                #self.play = AimDodge(self.primus, 0.8, self.state.ball.position)
 
                 # Drive
                 #self.play = Drive(self.primus,target_speed=5000)
@@ -105,6 +108,8 @@ class Primus(BaseAgent):
                 #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
 
                 # Strikes
+                self.state.predict_ball()
+                self.play = Strike(self.primus, self.state, self.state.ball.position)
                 #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
 
                 # Defense
@@ -115,5 +120,11 @@ class Primus(BaseAgent):
         self.renderer.draw_line_3d(self.primus.position, self.state.ball.position, self.renderer.white())
         self.renderer.draw_string_3d(self.primus.position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.primus.velocity):.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(self.state.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
+
+        # Draw Ball predictions 
+        if DRAW_BALL_PREDICTIONS and len(self.state.ball_predictions) > 0:
+            points = [ball.position for ball in self.state.ball_predictions]
+            if len(points) > 1:
+                self.renderer.draw_polyline_3d([vec3(p[0], p[1], 10) if p[2] < 10 else p for p in points], self.renderer.lime())
 
         return self.controls

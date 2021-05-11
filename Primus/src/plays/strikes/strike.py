@@ -39,9 +39,10 @@ class Strike(Play):
 
         self.initial_time = self.intercept.time
 
-        self.interruptible = self.arrive.interruptible
-
         self.name = "Strike"
+
+    def interruptible(self):
+        return self.arrive.interruptible()
 
     def configure(self, intercept):
         self.arrive.target = intercept.ground_pos
@@ -69,12 +70,10 @@ class Strike(Play):
             self.finished = True
 
     def pick_easiest_target(self, car, ball, targets):
-        to_goal = ground_direction(ball, self.state.their_goal.center)
+        to_goal = ground_direction(ball, self.state.enemy_net.center)
         return max(targets, key=lambda target: dot(ground_direction(car, ball) + to_goal * 0.5, ground_direction(ball, target)))
 
     def step(self, dt):
-        self.interruptible = self.arrive.interruptible
-
         if (
             self.last_update_time + self.UPDATE_INTERVAL < self.car.time < self.intercept.time - self.STOP_UPDATING
             and self.car.on_ground and not self.controls.jump
@@ -82,7 +81,7 @@ class Strike(Play):
             self.state.predict_ball(foresight=self.intercept.time - self.car.time + 1)
             self.update_intercept()
 
-        if self.intercept.time - self.car.time > 1.0 and self.interruptible and not self.car.on_ground:
+        if self.intercept.time - self.car.time > 1.0 and self.interruptible() and not self.car.on_ground:
             self.finished = True
 
         self.arrive.step(dt)

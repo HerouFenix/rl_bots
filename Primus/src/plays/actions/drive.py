@@ -255,7 +255,7 @@ class Arrive(Play):
     Arrive at a target location at a certain time and angle
     """
 
-    def __init__(self, agent, target = vec3(0,0,0), arrival_time = 0.0, target_direction = None):
+    def __init__(self, agent):
         super().__init__(agent)
         self.drive = Drive(self.car)
         self.travel = AdvancedDrive(self.car)
@@ -263,9 +263,9 @@ class Arrive(Play):
         self.travel.drive.backwards = False
         self.action = self.drive
 
-        self.target_direction = target_direction
-        self.target = target
-        self.arrival_time = arrival_time
+        self.target_direction = None
+        self.target = None
+        self.arrival_time = 0
         self.backwards = False
 
         self.lerp_time = 0.56
@@ -304,6 +304,7 @@ class Arrive(Play):
         self.drive.target_pos = shifted_target
         self.travel.target = shifted_target
 
+        # Define what our drive target speed is
         dist_to_target = ground_distance(self.car.position, shifted_target)
         time_left = nonzero(shifted_arrival_time - self.car.time)
         target_speed = clamp(dist_to_target / time_left, 0, 2300)
