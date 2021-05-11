@@ -25,7 +25,7 @@ class Strike(Play):
         super().__init__(agent)
 
         self.state = state
-        self.target = target
+        self.target = target # Corresponds to where we want the ball the go to
 
         self.arrive = Arrive(agent)
         self.intercept = None
@@ -73,7 +73,7 @@ class Strike(Play):
             self.finished = True
 
     def pick_easiest_target(self, car, ball, targets):
-        # Pick the easiest target (between the ball and the given targets, be them cars or ball predictions)
+        # Pick the easiest target (i.e where which target is easiest to throw the ball to)
         
         to_goal = ground_direction(ball, self.state.enemy_net.center)
         return max(targets, key=lambda target: dot(ground_direction(car, ball) + to_goal * 0.5, ground_direction(ball, target)))
@@ -212,3 +212,28 @@ class CloseStrike(DodgeStrike):
         self.target[0] = abs_clamp(self.intercept.ground_pos[0], 300)
 
         super().configure(intercept)
+
+class SetupStrike(DodgeStrike):
+    """
+    Variant of the DodgeStrike used to make the ball bounce off a wall towards the target position
+    Good for setups (duh)
+    """
+
+    JUMP_TIME_MULTIPLIER = 1.1
+
+    def __init__(self, agent, state, target=None):
+        #self.real_target = target
+        self.state = state
+
+        # Pick which wall we should bounce off of
+        mirrors = [self.mirror_position(target, 1), self.mirror_position(target, -1)]
+        target = self.pick_easiest_target(agent, self.state.ball, mirrors)
+        
+        super().__init__(agent, state, target)
+
+        self.name = "SetupStrike"
+
+    @staticmethod
+    def mirror_position(pos, wall_sgn):
+        mirrored_x = 2 * 4096 * wall_sgn - pos[0]
+        return vec3(mirrored_x, pos[1], pos[2])

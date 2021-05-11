@@ -11,12 +11,14 @@ from plays import strategy
 from plays.play import Play
 from plays.actions.drive import Drive, Stop, AdvancedDrive, Arrive
 from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
-from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike
+from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike, SetupStrike
+from plays.strikes.aerial import AerialStrike, DoubleAerialStrike
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
 TRAINING = False # Set to True if using a training scenario
 DRAW_BALL_PREDICTIONS = False # Set to True if you want to show the ball prediction lines
+DRAW_FLIGHT_PATH = True # Set to True if you want to show the ball flight path when aerialing
 
 class Primus(BaseAgent):
 
@@ -78,7 +80,11 @@ class Primus(BaseAgent):
             #self.play = Strike(self.primus, self.state, self.state.ball.position)
             #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
             #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
-            self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
+            #self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
+            #self.play = SetupStrike(self.primus, self.state, self.state.ball.position)
+            #self.play = AerialStrike(self.primus, self.state, self.state.ball.position)
+            aerial = AerialStrike(self.primus, self.state, self.state.ball.position)
+            self.play = DoubleAerialStrike(aerial)
 
             # Defense
 
@@ -114,8 +120,12 @@ class Primus(BaseAgent):
                 #self.play = Strike(self.primus, self.state, self.state.ball.position)
                 #self.play = DodgeStrike(self.primus, self.state, self.state.ball.position)
                 #self.play = BumpStrike(self.primus, self.state, self.state.ball.position)
-                self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
-
+                #self.play = CloseStrike(self.primus, self.state, self.state.ball.position)
+                #self.play = SetupStrike(self.primus, self.state, self.state.ball.position)
+                self.play = AerialStrike(self.primus, self.state, self.state.ball.position)
+                #aerial = AerialStrike(self.primus, self.state, self.state.ball.position)
+                #self.play = DoubleAerialStrike(aerial)
+                
                 # Defense
         
         # Draw play name
@@ -130,5 +140,12 @@ class Primus(BaseAgent):
             points = [ball.position for ball in self.state.ball_predictions]
             if len(points) > 1:
                 self.renderer.draw_polyline_3d([vec3(p[0], p[1], 10) if p[2] < 10 else p for p in points], self.renderer.lime())
+
+        # Draw Flight path
+        if DRAW_FLIGHT_PATH:
+            if isinstance(self.play,AerialStrike) and len(self.play.flight_path) > 0:  
+                self.renderer.draw_polyline_3d([vec3(p[0], p[1], 10) if p[2] < 10 else p for p in self.play.flight_path], self.renderer.orange())
+            elif isinstance(self.play,DoubleAerialStrike) and len(self.play.aerial_strike.flight_path) > 0:  
+                self.renderer.draw_polyline_3d([vec3(p[0], p[1], 10) if p[2] < 10 else p for p in self.play.aerial_strike.flight_path], self.renderer.orange())
 
         return self.controls

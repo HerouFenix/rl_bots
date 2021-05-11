@@ -20,7 +20,7 @@ def make_match_config_with_my_bot() -> MatchConfig:
     match_config = make_empty_match_config()
     match_config.player_configs = [
         PlayerConfig.bot_config(
-            Path(__file__).absolute().parent.parent / 'src' / 'bot.cfg',
+            Path(__file__).absolute().parent.parent  / 'bot.cfg',
             Team.BLUE
         ),
     ]
@@ -93,12 +93,34 @@ class DrivesToBallExercise(TrainingExercise):
             boosts={i: BoostState(0) for i in range(34)},
         )
 
+@dataclass
+class AerialExercise(TrainingExercise):
+    """
+    Spawns the ball in the air
+    """
+    def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
+        return GameState(
+            ball=BallState(physics=Physics(
+                location=Vector3(0, 0, 100),
+                velocity=Vector3(0, 0, 0),
+                angular_velocity=Vector3(0, 0, 0))),
+            cars={
+                0: CarState(
+                    physics=Physics(
+                        location=Vector3(0, 2000, 0),
+                        rotation=Rotator(0, -pi / 2, 0),
+                        velocity=Vector3(0, 0, 0),
+                        angular_velocity=Vector3(0, 0, 0)),
+                    jumped=False,
+                    double_jumped=False,
+                    boost_amount=100)
+            },
+            boosts={i: BoostState(0) for i in range(34)},
+        )
+
 
 def make_default_playlist() -> Playlist:
     exercises = [
-        StrikerPatience('start perfectly center'),
-        StrikerPatience('start on the right', car_start_x=-1000),
-        DrivesToBallExercise('Get close to ball'),
-        DrivesToBallExercise('Get close-ish to ball', grader=DriveToBallGrader(min_dist_to_pass=1000))
+        AerialExercise('Fly and hit ball'),
     ]
     return add_my_bot_to_playlist(exercises)
