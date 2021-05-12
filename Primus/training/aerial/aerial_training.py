@@ -55,12 +55,12 @@ class AerialExercise(StrikerExercise):
 
         start_pos = random.choice(random_start_pos)
 
-        ball_y = random.randint(-1250,3000)
+        ball_y = random.randint(-1250,0)
         ball_x = random.randint(-1250, 1250)
 
         random_ball = [
-            (Vector3(ball_x, ball_y, 5000), Vector3(0, 0, -50)),
-            (Vector3(ball_x, ball_y, 0), Vector3(0, 0, 2000)),
+            (Vector3(ball_x, ball_y, 2044), Vector3(0, 0, -10)),
+            (Vector3(ball_x, ball_y, 0), Vector3(0, 0, 3000)),
         ]
 
         ball_pos = random.choice(random_ball)

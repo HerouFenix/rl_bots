@@ -96,15 +96,15 @@ class Primus(BaseAgent):
             #self.play = Defense(self.primus, self.state, self.state.ball.position, 5000)
 
             # Clear
-            #self.state.predict_ball()
+            self.state.predict_ball()
 
             #self.play = DodgeClear(self.primus, self.state)
             #self.play = BumpClear(self.primus, self.state)
-            #self.play = AerialClear(self.primus, self.state)
+            self.play = AerialClear(self.primus, self.state)
 
             # Utility
             #self.play = Refuel(self.primus, self.state)
-            self.play = Recovery(self.primus, self.state)
+            #self.play = Recovery(self.primus, self.state)
 
         # If bot has picked a play, execute it
         if self.play is not None:
@@ -127,7 +127,7 @@ class Primus(BaseAgent):
                 #self.play = Drive(self.primus,target_speed=5000)
                 #self.play = AdvancedDrive(self.primus, self.state.ball.position)
                 #self.play = Arrive(self.primus, arrival_time = 20.0)
-                #self.play = Stop(self.primus)
+                self.play = Stop(self.primus)
 
                 # Kickoffs
                 #self.play = SimpleKickoff(self.primus, self.state)

@@ -1,18 +1,18 @@
 from pathlib import Path
 from dataclasses import dataclass, field
 from math import pi
+import random
 
 from rlbot.utils.game_state_util import GameState, BoostState, BallState, CarState, Physics, Vector3, Rotator
 from rlbot.matchconfig.match_config import MatchConfig, PlayerConfig, Team
 from rlbottraining.common_exercises.common_base_exercises import StrikerExercise
+from rlbottraining.common_graders.goal_grader import StrikerGrader
 from rlbottraining.rng import SeededRandomNumberGenerator
 from rlbottraining.match_configs import make_empty_match_config
 from rlbottraining.grading.grader import Grader
 from rlbottraining.training_exercise import TrainingExercise, Playlist
 
 import training_util
-from drive_to_ball_grader import DriveToBallGrader
-
 
 def make_match_config_with_my_bot() -> MatchConfig:
     # Makes a config which only has our bot in it for now.
@@ -20,7 +20,7 @@ def make_match_config_with_my_bot() -> MatchConfig:
     match_config = make_empty_match_config()
     match_config.player_configs = [
         PlayerConfig.bot_config(
-            Path(__file__).absolute().parent.parent  / 'src' / 'bot.cfg',
+            Path(__file__).absolute().parent.parent.parent  / 'bot.cfg',
             Team.BLUE
         ),
     ]
@@ -38,52 +38,43 @@ def add_my_bot_to_playlist(exercises: Playlist) -> Playlist:
 
 
 @dataclass
-class StrikerPatience(StrikerExercise):
+class AerialExercise(StrikerExercise):
     """
-    Drops the ball from a certain height, requiring the bot to not drive
-    underneath the ball until it's in reach.
+    Spawns the ball in the air
     """
-
-    car_start_x: float = 0
+    grader: Grader = StrikerGrader(timeout_seconds = 7.0)
 
     def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
+        random_start_pos = [
+            (Vector3(-2048, -2560, 18), Rotator(0, 0.25*pi, 0)),
+            (Vector3(0, -4608, 18), Rotator(0, 0.5*pi, 0)),
+            (Vector3(256.0, -3840, 18), Rotator(0, 0.5*pi, 0)),
+            (Vector3(-256, -3840, 18), Rotator(0, 0.5*pi, 0)),
+            (Vector3(2048, -2560, 18), Rotator(0, 0.75*pi, 0))
+        ]
+
+        start_pos = random.choice(random_start_pos)
+
+        ball_y = random.randint(-1250,0)
+        ball_x = random.randint(-1250, 1250)
+
+        random_ball = [
+            (Vector3(ball_x, ball_y, 2044), Vector3(0, 0, -10)),
+            (Vector3(ball_x, ball_y, 0), Vector3(0, 0, 3000)),
+        ]
+
+        ball_pos = random.choice(random_ball)
+
         return GameState(
             ball=BallState(physics=Physics(
-                location=Vector3(0, 4400, 1000),
-                velocity=Vector3(0, 0, 200),
+                location=ball_pos[0],
+                velocity=ball_pos[1],
                 angular_velocity=Vector3(0, 0, 0))),
             cars={
                 0: CarState(
                     physics=Physics(
-                        location=Vector3(self.car_start_x, 3000, 0),
-                        rotation=Rotator(0, pi / 2, 0),
-                        velocity=Vector3(0, 0, 0),
-                        angular_velocity=Vector3(0, 0, 0)),
-                    jumped=False,
-                    double_jumped=False,
-                    boost_amount=0)
-            },
-            boosts={i: BoostState(0) for i in range(34)},
-        )
-
-@dataclass
-class DrivesToBallExercise(TrainingExercise):
-    """
-    Checks that we drive to the ball when it's in the center of the field.
-    """
-    grader: Grader = field(default_factory=DriveToBallGrader)
-
-    def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
-        return GameState(
-            ball=BallState(physics=Physics(
-                location=Vector3(0, 0, 100),
-                velocity=Vector3(0, 0, 0),
-                angular_velocity=Vector3(0, 0, 0))),
-            cars={
-                0: CarState(
-                    physics=Physics(
-                        location=Vector3(0, 2000, 0),
-                        rotation=Rotator(0, -pi / 2, 0),
+                        location=start_pos[0],
+                        rotation=start_pos[1],
                         velocity=Vector3(0, 0, 0),
                         angular_velocity=Vector3(0, 0, 0)),
                     jumped=False,
@@ -96,5 +87,6 @@ class DrivesToBallExercise(TrainingExercise):
 
 def make_default_playlist() -> Playlist:
     exercises = [
+        AerialExercise('Fly and hit ball'),
     ]
     return add_my_bot_to_playlist(exercises)

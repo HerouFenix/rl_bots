@@ -28,7 +28,8 @@ class AerialStrike(Strike):
         self.aerial.single_jump = not self.DOUBLE_JUMP
 
         super().__init__(agent, state, target)
-        self.arrive.allow_fancy_moves = False  # Try enabling this (might mess up cus fancy moves may mess up the approach)
+        
+        self.arrive.allow_fancy_moves = False
 
         self.flying = False
         self.flight_path = []
@@ -37,18 +38,18 @@ class AerialStrike(Strike):
 
     def interruptible(self):
         return self.flying or super().interruptible()
-
+    
     def intercept_predicate(self, car, ball):
-        return True
         required_time = range_map(ball.position[2],
                                   self.MINIMAL_HEIGHT,
                                   self.MAXIMAL_HEIGHT,
                                   self.MINIMAL_HEIGHT_TIME,
                                   self.MAXIMAL_HEIGHT_TIME)
         return self.MINIMAL_HEIGHT < ball.position[2] < self.MAXIMAL_HEIGHT and ball.time - car.time > required_time
-
+    
     def configure(self, intercept):
         super().configure(intercept)
+
         self.aerial.target = intercept.position - direction(intercept, self.target) * 100
         self.aerial.up = normalize(ground_direction(intercept, self.car) + vec3(0, 0, 0.5))
         self.aerial.arrival_time = intercept.time
@@ -56,39 +57,37 @@ class AerialStrike(Strike):
     @staticmethod
     def simulate_flight(car, aerial, flight_path = None):
         test_car = Car(car)
-        
+
         test_aerial = Aerial(test_car)
-
         test_aerial.target = aerial.target
-
-        test_aerial.arrival_time =  aerial.arrival_time
-        test_aerial.angle_threshold =  aerial.angle_threshold
-        test_aerial.up =  aerial.up
-        test_aerial.single_jump =  aerial.single_jump
+        test_aerial.arrival_time = aerial.arrival_time
+        test_aerial.angle_threshold = aerial.angle_threshold
+        test_aerial.up = aerial.up
+        test_aerial.single_jump = aerial.single_jump
 
         if flight_path is not None: flight_path.clear()
 
         while not test_aerial.finished:
             test_aerial.step(1 / 120)
-            test_car.boost = 100 
+            test_car.boost = 100
             test_car.step(test_aerial.controls, 1 / 120)
 
             if flight_path is not None:
                 flight_path.append(vec3(test_car.position))
 
         return test_car
-    
+
     def step(self, dt):
         time_left = self.aerial.arrival_time - self.car.time
 
         if self.flying:
-            dir_to_ball = direction(self.car, self.state.ball)
+            to_ball = direction(self.car, self.state.ball)
 
-            # Up in the air
+            # Up high in the air
             if self.car.position[2] > 200:
-                self.aerial.up = vec3(0, 0, -1) + xy(dir_to_ball)
+                self.aerial.up = vec3(0, 0, -1) + xy(to_ball)
 
-            self.aerial.target_orientation = look_at(dir_to_ball, vec3(0,0,-3) + dir_to_ball)
+            self.aerial.target_orientation = look_at(to_ball, vec3(0, 0, -3) + to_ball)
             self.aerial.step(dt)
 
             self.controls = self.aerial.controls
@@ -97,22 +96,23 @@ class AerialStrike(Strike):
         else:
             super().step(dt)
 
-            # Simulate aerial
-            simulated = self.simulate_flight(self.car, self.aerial, self.flight_path)
-            #simulated = self.simulate_flight()
+            # Simulate what the aerial will look like
+            simulated_car = self.simulate_flight(self.car, self.aerial, self.flight_path)
 
             speed_towards_target = dot(self.car.velocity, ground_direction(self.car, self.aerial.target))
             speed_needed = ground_distance(self.car, self.aerial.target) / time_left
 
-            # If too fast, slow down
+            # If we're too fast, slow down
             if speed_towards_target > speed_needed and angle_to(self.car, self.aerial.target) < 0.1:
                 self.controls.throttle = -1
 
-            # If we're near the target, start flying
-            elif distance(simulated, self.aerial.target) < self.MAX_DISTANCE_ERROR:
+            # If near the target, start flying
+            elif distance(simulated_car, self.aerial.target) < self.MAX_DISTANCE_ERROR:
                 if angle_to(self.car, self.aerial.target) < 0.1 or norm(self.car.velocity) < 1000:
                     """
+                    #Never true because our delay takeoff is always false (fast aerial)
                     if self.DELAY_TAKEOFF and ground_distance(self.car, self.aerial.target) > 1000:
+                        # extrapolate current state a small amount of time
                         future_car = Car(self.car)
                         time = 0.5
                         future_car.time += time
@@ -120,19 +120,23 @@ class AerialStrike(Strike):
                             else normalize(future_car.velocity) * 500 * time
                         future_car.position += displacement
 
-                        # Simulate aerial for future car
-                        future_simulated = self.simulate_flight(future_car, self.aerial)
+                        # simulate aerial fot the extrapolated car again
+                        future_simulated_car = self.simulate_flight(future_car, self.aerial)
 
-                        # If aerial was succesful, continue driving to make sure we go for the latest possible areals
-                        if distance(future_simulated, self.aerial.target) > self.MAX_DISTANCE_ERROR:
+                        # if the aerial is also successful, that means we should continue driving instead of taking off
+                        # this makes sure that we go for the most late possible aerials, which are the most effective
+                        if distance(future_simulated_car, self.aerial.target) > self.MAX_DISTANCE_ERROR:
                             self.flying = True
+                        else:
+                            self.too_early = True
                     else:
                     """
                     self.flying = True
 
             else:
-                self.controls.throttle = 1 
-            
+                # If all else fails, just drive
+                self.controls.throttle = 1
+
 class DoubleAerialStrike(Play):
     """
     AerialStrike followed that checks if Primus can continue aerialing to hit the ball a second time
