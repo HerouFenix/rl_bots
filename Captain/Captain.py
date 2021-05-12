@@ -74,14 +74,19 @@ class Captain(BaseAgent):
             my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
             self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
         
+        print(self.team_actions)
+
         # Send / Receive TMCP messages
         self.handle_comms()
+
+        print(self.team_actions)
 
         # When you're finished with the action or if it has been cancelled, reconsider team strategy
         if self.action == None or self.action.finished:
             if self.captain:
                 self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
 
+            print(self.team_actions)
             # Pick action according to previous orders
             self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
 
@@ -149,12 +154,15 @@ class Captain(BaseAgent):
         # Decide what to do with your mateys
         if self.captain:
             for index in self.team_actions:
-                message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
-
                 if index in self.last_sent and self.last_sent[index] == self.team_actions[index] and self.last_sent[index] != KICKOFF:
                     continue
+                
+                message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
+
 
                 if index == self.index:
+                    if self.stance != message.target:
+                        print("Old stance of ", self.index, "was", self.stance, "but now is", message.target)
                     self.stance = message.target
 
                 else:

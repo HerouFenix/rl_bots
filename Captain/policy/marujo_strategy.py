@@ -29,9 +29,10 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     info.predict_ball()
 
     my_intercept = Intercept(my_car, info.ball_predictions)
-    their_intercepts = [Intercept(opponent, info.ball_predictions) for opponent in opponents]
-    their_intercept = min(their_intercepts, key=lambda i: i.time)
-    opponent = their_intercept.car
+    #their_intercepts = [Intercept(opponent, info.ball_predictions) for opponent in opponents]
+    
+    #their_intercept = min(their_intercepts, key=lambda i: i.time)
+    #opponent = their_intercept.car
 
     banned_boostpads = {pad for pad in info.large_boost_pads if
                         abs(pad.position[1] - their_goal[1]) < abs(my_intercept.position[1] - their_goal[1])
