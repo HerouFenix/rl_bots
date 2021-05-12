@@ -4,6 +4,7 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from rlutilities.linear_algebra import vec3, norm
 from util.game_info import GameInfo
+from util.math import distance
 
 from plays import strategy
 
@@ -55,7 +56,7 @@ class Primus(BaseAgent):
         # If the bot is not attempting to do anything
         if self.play is None:
             # Get a play to execute
-            #self.play = strategy.choose_play(self.state, self.primus)
+            self.play = strategy.choose_play(self.state, self.primus)
 
             """Test individual moves"""
             # Jumps
@@ -96,11 +97,11 @@ class Primus(BaseAgent):
             #self.play = Defense(self.primus, self.state, self.state.ball.position, 5000)
 
             # Clear
-            self.state.predict_ball()
+            #self.state.predict_ball()
 
             #self.play = DodgeClear(self.primus, self.state)
             #self.play = BumpClear(self.primus, self.state)
-            self.play = AerialClear(self.primus, self.state)
+            #self.play = AerialClear(self.primus, self.state)
 
             # Utility
             #self.play = Refuel(self.primus, self.state)
@@ -113,7 +114,7 @@ class Primus(BaseAgent):
 
             if(self.play.finished): # If the bot finished its play
                 # Get a play to execute
-                #self.play = strategy.choose_play(self.state, self.primus) #Pick new play
+                self.play = strategy.choose_play(self.state, self.primus) #Pick new play
                 
                 """Test individual moves"""
                 # Jumps
@@ -127,7 +128,7 @@ class Primus(BaseAgent):
                 #self.play = Drive(self.primus,target_speed=5000)
                 #self.play = AdvancedDrive(self.primus, self.state.ball.position)
                 #self.play = Arrive(self.primus, arrival_time = 20.0)
-                self.play = Stop(self.primus)
+                #self.play = Stop(self.primus)
 
                 # Kickoffs
                 #self.play = SimpleKickoff(self.primus, self.state)
@@ -164,7 +165,7 @@ class Primus(BaseAgent):
 
                 # Utility
                 #self.play = Refuel(self.primus, self.state)
-                self.play = Recovery(self.primus, self.state)
+                #self.play = Recovery(self.primus, self.state)
 
         
         # Draw play name

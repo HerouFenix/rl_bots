@@ -65,7 +65,7 @@ class AerialStrike(Strike):
         test_aerial.up = aerial.up
         test_aerial.single_jump = aerial.single_jump
 
-        if flight_path is not None: flight_path.clear()
+        if flight_path is not None and len(flight_path) > 0: flight_path.clear()
 
         while not test_aerial.finished:
             test_aerial.step(1 / 120)

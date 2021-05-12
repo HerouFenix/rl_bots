@@ -12,7 +12,7 @@ from rlutilities.simulation import Car, Ball, Field, sphere
 
 from util.game_info import GameInfo
 from util.intercept import Intercept
-from util.math import distance, ground_distance, clamp, ground_direction, abs_clamp
+from util.math import distance, ground_distance, clamp, ground_direction, abs_clamp, direction
 
 class Strike(Play):
     """

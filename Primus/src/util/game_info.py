@@ -1,6 +1,7 @@
 from rlbot.utils.structures.game_data_struct import GameTickPacket, FieldInfoPacket
 from rlutilities.simulation import Game, Car, Ball, Pad, Input
 from rlutilities.linear_algebra import vec3, vec2, norm, normalize, cross, rotation, dot, xy
+from util.math import distance
 
 class Net:
     def __init__(self, team):
@@ -49,7 +50,7 @@ class GameInfo(Game):
             pad.timer = 4.0 - pad.timer
 
 
-    def get_teammates(self, car: Car):
+    def get_teammates(self, car):
         # Get all teammate's cars (i.e cars in the same team and with different id than our own)
         return [self.cars[i] for i in range(self.num_cars) if self.cars[i].team == self.team and self.cars[i].id != car.id]
 
@@ -113,6 +114,31 @@ class GameInfo(Game):
                     if distance(pos1, pos2) < 150: #150 - Collision Threshold
                         collisions.append((i, j, step * dt))
                         break
+        
+        return collisions
+
+    def detect_collisions_with_agent(self, agent, foresight=0.5, dt=1/60):
+        # Detect collisions with given agent - List with time until collision
+
+        time_steps = int(foresight / dt)
+        predictions = [self.predict_car(i, foresight, dt) for i in range(self.num_cars)]
+
+        collisions = []
+
+
+        # Check collision between each 2 cars
+        for i in range(self.num_cars):
+            if i == agent.id: #Ignore collision with self
+                continue
+            
+            for step in range(time_steps):
+                # Get the predicted position of the 2 cars and check if their distance is smaller than a collision threshold
+                pos1 = predictions[agent.id][step]
+                pos2 = predictions[i][step]
+
+                if distance(pos1, pos2) < 150: #150 - Collision Threshold
+                    collisions.append(step * dt)
+                    break
         
         return collisions
 
