@@ -93,34 +93,8 @@ class DrivesToBallExercise(TrainingExercise):
             boosts={i: BoostState(0) for i in range(34)},
         )
 
-@dataclass
-class AerialExercise(TrainingExercise):
-    """
-    Spawns the ball in the air
-    """
-    def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
-        return GameState(
-            ball=BallState(physics=Physics(
-                location=Vector3(0, 0, 100),
-                velocity=Vector3(0, 0, 0),
-                angular_velocity=Vector3(0, 0, 0))),
-            cars={
-                0: CarState(
-                    physics=Physics(
-                        location=Vector3(0, 2000, 0),
-                        rotation=Rotator(0, -pi / 2, 0),
-                        velocity=Vector3(0, 0, 0),
-                        angular_velocity=Vector3(0, 0, 0)),
-                    jumped=False,
-                    double_jumped=False,
-                    boost_amount=100)
-            },
-            boosts={i: BoostState(0) for i in range(34)},
-        )
-
 
 def make_default_playlist() -> Playlist:
     exercises = [
-        AerialExercise('Fly and hit ball'),
     ]
     return add_my_bot_to_playlist(exercises)

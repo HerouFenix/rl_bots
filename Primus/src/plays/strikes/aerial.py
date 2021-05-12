@@ -22,7 +22,7 @@ class AerialStrike(Strike):
     MAXIMAL_HEIGHT_TIME = 2.5
     DOUBLE_JUMP = True
 
-    def __init__(self, agent, state, target):
+    def __init__(self, agent, state, target = None):
         self.aerial = Aerial(agent)
         self.aerial.angle_threshold = 0.8
         self.aerial.single_jump = not self.DOUBLE_JUMP

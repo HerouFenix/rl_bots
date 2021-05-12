@@ -14,7 +14,11 @@ from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
 from plays.strikes.strike import Strike, DodgeStrike, BumpStrike, CloseStrike, SetupStrike, DribbleStrike
 from plays.strikes.aerial import AerialStrike, DoubleAerialStrike
 from plays.dribbles.dribble import Dribble
+from plays.defense.defense import Defense
+from plays.defense.clear import BumpClear, DodgeClear, AerialClear
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
+from plays.utility.recovery import Recovery
+from plays.utility.refuel import Refuel
 from rlutilities.simulation import Input
 
 DRAW_BALL_PREDICTIONS = False # Set to True if you want to show the ball prediction lines
@@ -72,7 +76,7 @@ class Primus(BaseAgent):
             #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
 
             # Strikes
-            self.state.predict_ball()
+            #self.state.predict_ball()
             
             #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
             #self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
@@ -82,13 +86,25 @@ class Primus(BaseAgent):
             #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
 
             #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-            aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-            self.play = DoubleAerialStrike(aerial)
+            #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = DoubleAerialStrike(aerial)
             
             # Dribble
             #self.play = Dribble(self.primus, self.state.ball, self.state.enemy_net.center)
                 
             # Defense
+            #self.play = Defense(self.primus, self.state, self.state.ball.position, 5000)
+
+            # Clear
+            #self.state.predict_ball()
+
+            #self.play = DodgeClear(self.primus, self.state)
+            #self.play = BumpClear(self.primus, self.state)
+            #self.play = AerialClear(self.primus, self.state)
+
+            # Utility
+            #self.play = Refuel(self.primus, self.state)
+            self.play = Recovery(self.primus, self.state)
 
         # If bot has picked a play, execute it
         if self.play is not None:
@@ -118,7 +134,7 @@ class Primus(BaseAgent):
                 #self.play =  SpeedFlipDodgeKickoff(self.primus, self.state)
 
                 # Strikes
-                self.state.predict_ball()
+                #self.state.predict_ball()
                 
                 #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
                 #self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
@@ -129,14 +145,27 @@ class Primus(BaseAgent):
                 #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
                 
                 #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-                aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-                self.play = DoubleAerialStrike(aerial)
+                #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+                #self.play = DoubleAerialStrike(aerial)
 
 
                 # Dribble
                 #self.play = Dribble(self.primus, self.state.ball, self.state.enemy_net.center)
                 
                 # Defense
+                #self.play = Defense(self.primus, self.state, self.state.ball.position, 10)
+
+                # Clear
+                #self.state.predict_ball()
+
+                #self.play = DodgeClear(self.primus, self.state)
+                #self.play = BumpClear(self.primus, self.state)
+                #self.play = AerialClear(self.primus, self.state)
+
+                # Utility
+                #self.play = Refuel(self.primus, self.state)
+                self.play = Recovery(self.primus, self.state)
+
         
         # Draw play name
         self.renderer.draw_string_3d(self.primus.position + vec3(0,0,10), 2, 2, self.play.name, self.renderer.white())
@@ -144,6 +173,11 @@ class Primus(BaseAgent):
         self.renderer.draw_line_3d(self.primus.position, self.state.ball.position, self.renderer.white())
         self.renderer.draw_string_3d(self.primus.position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.primus.velocity):.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(self.state.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
+
+        # Draw target
+        if self.play.target is not None:
+            self.renderer.draw_line_3d(self.primus.position, self.play.target, self.renderer.cyan())
+
 
         # Draw Ball predictions 
         if DRAW_BALL_PREDICTIONS and len(self.state.ball_predictions) > 0:
