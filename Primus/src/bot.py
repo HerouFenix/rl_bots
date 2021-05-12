@@ -17,7 +17,6 @@ from plays.dribbles.dribble import Dribble
 from plays.actions.jump import Jump, AirDodge, SpeedFlip, HalfFlip, AimDodge
 from rlutilities.simulation import Input
 
-TRAINING = False # Set to True if using a training scenario
 DRAW_BALL_PREDICTIONS = False # Set to True if you want to show the ball prediction lines
 DRAW_FLIGHT_PATH = True # Set to True if you want to show the ball flight path when aerialing
 
@@ -45,10 +44,6 @@ class Primus(BaseAgent):
         self.primus = self.state.cars[self.index]
 
     def get_output(self, packet: GameTickPacket):
-        if TRAINING and self.tick_counter < 20:
-            self.tick_counter += 1
-            return Input()
-
 
         # Start by updating the game's state
         self.state.read_packet(packet, self.get_field_info())
@@ -80,15 +75,15 @@ class Primus(BaseAgent):
             self.state.predict_ball()
             
             #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
-            self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
+            #self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
             #self.play = BumpStrike(self.primus, self.state, self.state.enemy_net.center)
             #self.play = CloseStrike(self.primus, self.state, self.state.enemy_net.center)
             #self.play = SetupStrike(self.primus, self.state, self.state.enemy_net.center)
             #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
 
             #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-            #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-            #self.play = DoubleAerialStrike(aerial)
+            aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+            self.play = DoubleAerialStrike(aerial)
             
             # Dribble
             #self.play = Dribble(self.primus, self.state.ball, self.state.enemy_net.center)
@@ -126,7 +121,7 @@ class Primus(BaseAgent):
                 self.state.predict_ball()
                 
                 #self.play = Strike(self.primus, self.state, self.state.enemy_net.center)
-                self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
+                #self.play = DodgeStrike(self.primus, self.state, self.state.enemy_net.center)
                 #self.play = BumpStrike(self.primus, self.state, self.state.enemy_net.center)
                 #self.play = CloseStrike(self.primus, self.state, self.state.enemy_net.center)
                 #self.play = SetupStrike(self.primus, self.state, self.state.enemy_net.center)
@@ -134,8 +129,8 @@ class Primus(BaseAgent):
                 #self.play = DribbleStrike(self.primus, self.state, self.state.enemy_net.center) 
                 
                 #self.play = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-                #aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
-                #self.play = DoubleAerialStrike(aerial)
+                aerial = AerialStrike(self.primus, self.state, self.state.enemy_net.center)
+                self.play = DoubleAerialStrike(aerial)
 
 
                 # Dribble

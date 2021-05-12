@@ -105,14 +105,16 @@ class Strike(Play):
 class DodgeStrike(Strike):
     """
     Strike by dodging (front flipping) into the ball
+
+    TODO: Commented lines use RLUtilities dodge, rather than our own aimdodge...check which is better
     """
 
     ALLOW_BACKWARDS = False
     JUMP_TIME_MULTIPLIER = 1.0
 
     def __init__(self, agent, state, target=None):
-        #self.dodge = AimDodge(agent, 0.1, state.ball.position)
-        self.dodge = Dodge(agent)
+        self.dodge = AimDodge(agent, 0.1, state.ball.position)
+        #self.dodge = Dodge(agent)
         self.dodge.duration = 0.15
         self.dodge.target = target
         
@@ -145,8 +147,8 @@ class DodgeStrike(Strike):
         self.arrive.target = intercept.ground_pos - hit_dir * 165
         self.arrive.target_direction = hit_dir
 
-        #self.dodge.jump.duration = self.get_jump_duration(ball.position[2])
-        self.dodge.duration = self.get_jump_duration(ball.position[2])
+        self.dodge.jump.duration = self.get_jump_duration(ball.position[2])
+        #self.dodge.duration = self.get_jump_duration(ball.position[2])
 
         self.dodge.target = intercept.ball.position
         self.arrive.additional_shift = self.get_jump_duration(ball.position[2]) * 1000
@@ -158,8 +160,8 @@ class DodgeStrike(Strike):
         else:
             super().step(dt)
             if (
-                #self.arrive.arrival_time - self.car.time < self.dodge.jump.duration + 0.13
-                self.arrive.arrival_time - self.car.time < self.dodge.duration + 0.13
+                self.arrive.arrival_time - self.car.time < self.dodge.jump.duration + 0.13
+                #self.arrive.arrival_time - self.car.time < self.dodge.duration + 0.13
                 and abs(self.arrive.drive.target_speed - norm(self.car.velocity)) < 1000
                 and (
                     dot(normalize(self.car.velocity), ground_direction(self.car, self.arrive.target)) > 0.95
