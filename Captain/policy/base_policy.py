@@ -37,7 +37,6 @@ def choose_stance(info: GameInfo, my_car: Car, team):
             else:
                 assigned_actions[index] = DEFENSE
 
-        print(assigned_actions)
         return assigned_actions
 
     # Interceptions
@@ -77,7 +76,6 @@ def choose_stance(info: GameInfo, my_car: Car, team):
     for index in team:
         if assigned_actions[index] == None:
             assigned_actions[index] = DEFENSE
-
 
     return assigned_actions
 
