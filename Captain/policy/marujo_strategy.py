@@ -10,7 +10,7 @@ from tools.intercept import Intercept
 from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
 
 def choose_action(info: GameInfo, my_car: Car, stance):
     ball = info.ball
@@ -29,10 +29,6 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     info.predict_ball()
 
     my_intercept = Intercept(my_car, info.ball_predictions)
-    #their_intercepts = [Intercept(opponent, info.ball_predictions) for opponent in opponents]
-    
-    #their_intercept = min(their_intercepts, key=lambda i: i.time)
-    #opponent = their_intercept.car
 
     banned_boostpads = {pad for pad in info.large_boost_pads if
                         abs(pad.position[1] - their_goal[1]) < abs(my_intercept.position[1] - their_goal[1])
@@ -51,7 +47,13 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     if stance == CLEAR:
         return defense.any_clear(info, my_intercept.car)
 
+    if stance == PREEMPTIVE_DEF:
+        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+
     if stance == DEFENSE:
+        if ground_distance(ball, my_goal) < 1000:
+            return defense.any_clear(info, my_intercept.car)
+
         return GeneralDefense(my_car, info, my_intercept.position, 7000)
 
     return GeneralDefense(my_car, info, my_intercept.position, 4000)
@@ -86,3 +88,23 @@ def choose_action(info: GameInfo, my_car: Car, stance):
 
     # fallback
     return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+
+
+def danger(info, my_car):
+
+    info.predict_ball()
+    my_intercept = Intercept(my_car, info.ball_predictions)
+    their_goal = ground(info.their_goal.center)
+    my_goal = ground(info.my_goal.center)
+
+    if (
+        ground_distance(my_intercept, my_goal) < 3000
+        and (abs(my_intercept.position[0]) < 2000 or abs(my_intercept.position[1]) < 4500)
+        and my_car.position[2] < 300
+    ):
+        if align(my_car.position, my_intercept.ball, their_goal) > 0.5:
+            return [ATTACK]
+
+        return [CLEAR]
+
+    return []

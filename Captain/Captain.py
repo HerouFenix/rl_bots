@@ -15,7 +15,7 @@ from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strateg
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, UNDEFINED
+from policy.macros import ACK, KICKOFF, CLEAR, ATTACK, UNDEFINED
 from policy import offense, defense, kickoffs
 
 from action.recovery import Recovery
@@ -74,19 +74,14 @@ class Captain(BaseAgent):
             my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
             self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
         
-        print(self.team_actions)
-
         # Send / Receive TMCP messages
-        self.handle_comms()
+        self.handle_comms(packet)
 
-        print(self.team_actions)
-
-        # When you're finished with the action or if it has been cancelled, reconsider team strategy
+        # When you're finished with the action or if it has been cancelled or the game has just reset, reconsider team strategy
         if self.action == None or self.action.finished:
             if self.captain:
                 self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team)
 
-            print(self.team_actions)
             # Pick action according to previous orders
             self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
 
@@ -143,7 +138,7 @@ class Captain(BaseAgent):
                 self.me = _obj
                 self.car = packet.game_cars[i]
 
-    def handle_comms(self):
+    def handle_comms(self, packet):
         """ Responsible for handling the TMCP packets sent in the previous iteration.
             Marujos read messages, captains send them. (general rule)
             TMCP only supports a pre-defined set of messages, so we will be adding a few by changing certain parameters.
@@ -159,16 +154,13 @@ class Captain(BaseAgent):
                 
                 message = TMCPMessage.boost_action(self.team, index, self.team_actions[index]) # Send the stance to maroojo
 
-
                 if index == self.index:
-                    if self.stance != message.target:
-                        print("Old stance of ", self.index, "was", self.stance, "but now is", message.target)
                     self.stance = message.target
 
                 else:
                     succ = self.tmcp_handler.send(message)
                     if not succ:
-                        print("Failed to send message to", index)
+                        self.logger.warn("Failed to send message to" + str(index))
 
                 self.last_sent[index] = self.team_actions[index]
 
@@ -181,8 +173,7 @@ class Captain(BaseAgent):
 
                 # Handle TMCPMessages, which for marujos is pretty much just updating stance.
                 for message in new_messages:
-                    # If the incoming order is None, we keep the previous stance
-                    if message.index == self.index:
+                    if message.index == self.index and message.team == self.team:
                         self.stance = message.target
 
                 if self.stance != UNDEFINED:
@@ -198,6 +189,14 @@ class Captain(BaseAgent):
             if self.action and self.action.interruptible():
                 self.action = None
                 return True
+
+        # reset action if we are not clearing, if its interruptible and the ball is entering the danger zone
+        # if ball is in a dangerous position, clear it, be it with a clear or with a well-alligned strike
+        dangerous = marujo_strategy.danger(self.info, self.info.cars[self.index])
+        if (dangerous and (self.stance not in [CLEAR, ATTACK]) and self.action and self.action.interruptible()):
+            self.action = None
+            self.stance = dangerous[0]
+            return True
 
         return False
 
