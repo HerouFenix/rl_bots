@@ -71,8 +71,9 @@ def choose_stance(info: GameInfo, my_car: Car, team):
         if best_intercept == our_intercepts[inter]:
             # if not completely out of position, go for a shot
             if (
-                align(best_intercept.car.position, best_intercept.ball, their_goal) > 0
-                or ground_distance(best_intercept, my_goal) > 6000
+                align(best_intercept.car.position, best_intercept.ball, their_goal) > 0.1
+                or ground_distance(best_intercept, my_goal) < 6000
+                and ATTACK not in assigned_actions.values()
             ):
                 assigned_actions[inter] = ATTACK
 
@@ -83,12 +84,14 @@ def choose_stance(info: GameInfo, my_car: Car, team):
     # Otherwise just assign them to defense / boost depending on whether the ball is
     for index in team:
         if assigned_actions[index] == None:
-            if info.cars[index].boost < 20 and ground_distance(our_intercepts[inter], their_goal) > 3000:
+            if info.cars[index].boost < 20 and ground_distance(our_intercepts[inter], their_goal) < 3000:
                 assigned_actions[index] = BOOST
 
     for index in team:
         if assigned_actions[index] == None:
             assigned_actions[index] = DEFENSE
+
+    # avoid_demos_and_team_bumps(info, info.cars, assigned_actions)
 
     return assigned_actions
 
@@ -119,16 +122,15 @@ def general_defense(info, my_car, clutch=False):
 
 
 ## Not used yet
-def avoid_demos_and_team_bumps(self, cars_by_index):
-    collisions = self.info.detect_collisions(time_limit=0.2, dt=1 / 60)
+def avoid_demos_and_team_bumps(info, cars_by_index, assigned_actions):
+    collisions = info.detect_collisions(time_limit=0.2, dt=1 / 60)
 
     for collision in collisions:
         index1, index2, time = collision
-        self.logger.debug(f"Collision: {index1} ->*<- {index2} in {time:.2f} seconds.")
 
         # avoid team bumps
         if index1 in cars_by_index and index2 in cars_by_index:
-            if cars_by_index[index1] is self.drone_going_for_ball:
+            if assigned_actions[index1] in [CLEAR, ATTACK]:
                 cars_by_index[index2].controls.jump = cars_by_index[index2].car.on_ground
             else:
                 cars_by_index[index1].controls.jump = cars_by_index[index1].car.on_ground
@@ -137,11 +139,11 @@ def avoid_demos_and_team_bumps(self, cars_by_index):
         # dodge demolitions
         # TODO: Refactor so there's no duplicate code
         elif index1 in cars_by_index:
-            opponent = self.info.cars[index2]
+            opponent = info.cars[index2]
             if norm(opponent.velocity) > 2000:
                 cars_by_index[index1].controls.jump = cars_by_index[index1].car.on_ground
 
         elif index2 in cars_by_index:
-            opponent = self.info.cars[index1]
+            opponent = info.cars[index1]
             if norm(opponent.velocity) > 2000:
                 cars_by_index[index2].controls.jump = cars_by_index[index2].car.on_ground   

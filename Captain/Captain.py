@@ -15,7 +15,7 @@ from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strateg
 from tools.drawing import DrawingTool
 from tools.game_info import GameInfo
 
-from policy.macros import ACK, KICKOFF, CLEAR, ATTACK, UNDEFINED
+from policy.macros import ACK, KICKOFF, CLEAR, ATTACK, DEFENSE, UNDEFINED
 from policy import offense, defense, kickoffs
 
 from action.recovery import Recovery
@@ -60,6 +60,7 @@ class Captain(BaseAgent):
         self.team_actions = {}
         self.last_sent = {}
         self.stance = UNDEFINED
+        self.negotiated = False
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
@@ -98,7 +99,6 @@ class Captain(BaseAgent):
                 
         if RENDERING:
             self.draw.execute()
-
 
         return self.controls
 
@@ -174,12 +174,23 @@ class Captain(BaseAgent):
                 # Handle TMCPMessages, which for marujos is pretty much just updating stance.
                 for message in new_messages:
                     if message.index == self.index and message.team == self.team:
-                        self.stance = message.target
+                        if not (packet.game_info.is_kickoff_pause and message.target not in [KICKOFF, DEFENSE]):
+                            self.stance = message.target
 
                 if self.stance != UNDEFINED:
+                    self.negotiated = True
                     break
 
     def check_resets(self, packet):
+
+        # cancel maneuver if a kickoff is happening and current maneuver isn't a kickoff maneuver
+        if packet.game_info.is_kickoff_pause and not self.negotiated:
+            self.action = None
+            self.stance = UNDEFINED
+
+        if self.negotiated and not packet.game_info.is_kickoff_pause:
+            self.negotiated = False
+
         # reset action when another car hits the ball
         touch = packet.game_ball.latest_touch
         if (touch.time_seconds > self.last_latest_touch_time and touch.player_name != packet.game_cars[self.index].name):
@@ -191,11 +202,11 @@ class Captain(BaseAgent):
                 return True
 
         # reset action if we are not clearing, if its interruptible and the ball is entering the danger zone
-        # if ball is in a dangerous position, clear it, be it with a clear or with a well-alligned strike
+        # if ball is in a dangerous position, clear it, be it with a clear or with a well-alligned strike   
         dangerous = marujo_strategy.danger(self.info, self.info.cars[self.index])
-        if (dangerous and (self.stance not in [CLEAR, ATTACK]) and self.action and self.action.interruptible()):
+        if (dangerous and self.stance != CLEAR and self.action and self.action.interruptible()):
+            self.stance = CLEAR
             self.action = None
-            self.stance = dangerous[0]
             return True
 
         return False
