@@ -29,6 +29,9 @@ class Drive(Play):
         self.drive_on_walls = False
 
         self.name = "Driving"
+
+    def interruptible(self):
+        return True
     
 
     def step(self, dt):
@@ -143,7 +146,7 @@ class AdvancedDrive(Play):
     HALFFLIP_DURATION = 2
     WAVEDASH_DURATION = 1.45
 
-    def __init__(self, car, target = vec3(0,0,0), use_boost = False):
+    def __init__(self, car, target = vec3(0,0,0), use_boost = False, target_speed = 2300):
         super().__init__(car)
 
         target = ground(target)
@@ -173,7 +176,7 @@ class AdvancedDrive(Play):
             and car.position[2] < 200
         )
 
-        self.drive = Drive(car, self.target, 2300, backwards)
+        self.drive = Drive(car, self.target, target_speed, backwards)
         self.action = self.drive
 
         self.name = "AdvancedDriving"

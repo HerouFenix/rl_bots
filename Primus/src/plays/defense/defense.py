@@ -15,7 +15,7 @@ class Defense(Play):
 
     # TODO: TRY WITHOUT A TIMEOUT AND INSTEAD SET AS FINISHED IF WE'VE STOPPED
 
-    DURATION = 0.5 # How long we wait for before terminating the play (and maybe restarting it)
+    DURATION = 0.2 # How long we wait for before terminating the play (and maybe restarting it)
     BOOST_LOOK_RADIUS = 1200 # How far away a boostpad can be before being discarded
     BOOST_LOOK_ANGLE = 2.0 # How far away (in terms of angle difference) the boost pad can be before its discaded
 
@@ -52,7 +52,7 @@ class Defense(Play):
 
         self.boost_pad = None
 
-        self.name = "Defending"
+        self.name = "SettingUp"
 
         self.stopped = False
 
@@ -99,12 +99,84 @@ class Defense(Play):
                         self.drive.step(dt)
                         self.controls = self.drive.controls
 
-                        self.name = "Defending (Refueling)"
+                        self.name = "SettingUp (Refueling)"
                         break
                 
                 if self.boost_pad is None: # If we're not chasing a boost pad, go to position
-                    self.name = "Defending"
+                    self.name = "SettingUp"
                     self.controls = self.travel.controls
+
+        # Avoid boosting unless really far away
+        if self.car.boost < 100 and ground_distance(self.car, self.travel.target) < 4000: self.controls.boost = False
+
+        self.finished = self.travel.driving and self.car.time > self.start_time + self.DURATION
+
+
+class GoToNet(Play):
+    DURATION = 0.2 # How long we wait for before terminating the play (and maybe restarting it)
+    BOOST_LOOK_RADIUS = 1200 # How far away a boostpad can be before being discarded
+    BOOST_LOOK_ANGLE = 2.0 # How far away (in terms of angle difference) the boost pad can be before its discaded
+
+    def __init__(self, agent, state, face_target):
+        super().__init__(agent)
+
+        self.state = state
+        self.face_target = face_target
+
+        dist = 0
+        target_pos = ground(self.state.net.center) + ground_direction(self.state.net.center, self.state.net.center) * dist
+
+        near_net = abs(self.car.position[1] - self.state.net.center[1]) < 3000 # Check if we're near our net
+        side_shift = 400 if near_net else 1800
+
+        points = target_pos + vec3(side_shift, 0, 0), target_pos - vec3(side_shift, 0, 0)
+        target_pos = nearest_point(self.state.net.center, points)
+
+        if abs(self.state.net.center[0]) < 1000 or ground_distance(self.car, self.state.net.center) < 1000:
+            target_pos = nearest_point(self.car.position, points)
+        target_pos = vec3(
+            abs_clamp(target_pos[0], 4096 - 500),
+            abs_clamp(target_pos[1], 5120 - 500),
+            target_pos[2]
+        )
+
+        self.travel = AdvancedDrive(agent, target_pos)
+        self.travel.finish_distance = 300
+
+        self.drive = Drive(agent)
+        self.stop = Stop(agent)
+
+        self.start_time = agent.time
+
+        self.name = "GoToNet"
+
+        self.stopped = False
+
+    def interruptible(self):
+        return self.travel.interruptible() or self.stopped
+
+    def step(self, dt):
+        if self.travel.finished:
+            # If we're done traveling, turn around to face the target
+            if angle_to(self.car, self.face_target) > 0.5:
+                self.drive.target_pos = self.face_target
+                self.drive.target_speed = 1000
+                self.drive.step(dt)
+                self.controls = self.drive.controls
+                #self.controls.handbrake = False
+                self.stopped = False
+
+            else:
+                self.stop.step(dt)
+                self.controls = self.stop.controls
+                self.stopped = True
+
+        else:
+            self.travel.step(dt)
+
+            self.stopped = False
+            
+            self.controls = self.travel.controls
 
         # Avoid boosting unless really far away
         if self.car.boost < 100 and ground_distance(self.car, self.travel.target) < 4000: self.controls.boost = False

@@ -137,7 +137,7 @@ class GameInfo(Game):
                 pos2 = predictions[i][step]
 
                 if distance(pos1, pos2) < 150: #150 - Collision Threshold
-                    collisions.append(step * dt)
+                    collisions.append((i, self.cars[i].team == self.team, step * dt))
                     break
         
         return collisions
