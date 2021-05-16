@@ -14,8 +14,6 @@ from util.game_info import GameInfo
 
 from policy.macros import ACK, KICKOFF, CLEAR, DEFENSE, UNDEFINED
 
-from action.recovery import Recovery
-
 try:
     from rlutilities.linear_algebra import *
     from rlutilities.mechanics import Aerial, AerialTurn, Dodge, Wavedash, Boostdash
@@ -88,13 +86,11 @@ class Captain(BaseAgent):
             self.controls = self.action.controls
 
             if RENDERING:
-                    self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,10), 2, 2, self.action.name, self.renderer.white())
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,10), 2, 2, self.action.name, self.renderer.white())
 
-                    self.renderer.draw_line_3d(self.info.cars[self.index].position, self.info.ball.position, self.renderer.white())
-                    self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.info.cars[self.index].velocity):.1f}', self.renderer.white())
-                    self.renderer.draw_rect_3d(self.info.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
-
-                    #self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0, 20), 1, 1, self.objective, self.renderer.white())
+                self.renderer.draw_line_3d(self.info.cars[self.index].position, self.info.ball.position, self.renderer.white())
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.info.cars[self.index].velocity):.1f}', self.renderer.white())
+                self.renderer.draw_rect_3d(self.info.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
                 
         if RENDERING:
             self.draw.execute()

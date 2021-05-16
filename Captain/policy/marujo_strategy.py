@@ -5,16 +5,12 @@ from rlutilities.linear_algebra import vec3
 from policy.macros import KICKOFF, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
 from policy.picker import pick_kickoff, pick_clear, pick_strike
 
-from plays.kickoff.kickoff import SimpleKickoff, SpeedFlipDodgeKickoff
-from plays.strikes.strike import DodgeStrike, BumpStrike, CloseStrike, SetupStrike, DribbleStrike
-from plays.strikes.aerial import AerialStrike, DoubleAerialStrike
-from plays.defense.defense import Defense, GoToNet
-from plays.defense.clear import DodgeClear, AerialClear
+from plays.defense.defense import Defense
 from plays.utility.recovery import Recovery
 from plays.utility.refuel import Refuel
 
 from util.intercept import Intercept
-from util.math import align, ground_distance, ground, distance
+from util.math import align, ground_distance, ground
 
 
 def choose_action(info: GameInfo, my_car: Car, stance):
@@ -23,7 +19,7 @@ def choose_action(info: GameInfo, my_car: Car, stance):
     my_goal = ground(info.net.center)
 
     # recovery
-    if not my_car.on_ground:
+    if not my_car.on_ground and stance != KICKOFF:
         return Recovery(my_car)
 
     # kickoff
