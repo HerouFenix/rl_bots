@@ -151,7 +151,11 @@ def choose_play(state, agent):
             
     # Check how many teammates are in our side of the field
     teammates_in_side = 0
+    min_dist_to_net = distance(teammates[0], net)
     for teammate in teammates:
+        cur_dist = distance(teammate, net)
+        if cur_dist < min_dist_to_net:
+            min_dist_to_net = cur_dist
         if state.team == 0:
             if teammate.position[1] < 0:
                 teammates_in_side += 1
@@ -164,15 +168,18 @@ def choose_play(state, agent):
         # If there's danger, CLEAR!
         danger = False
         for prediction in state.ball_predictions:
-            if prediction.time < 1.0 and state.net.check_inside(prediction.position):
+            if state.net.check_inside(prediction.position):
                 danger = True
+                break
+        
+        # if (danger or ground_distance(state.ball, net) < 800): # If ball is close to net, and no one else is close to the net, do your best to clear it
+        #     return (pick_clear(state, agent), "Danger Clearing")
 
-        if danger:
-            return (strategy.pick_clear(state, agent), "Danger Clearing")
-
-        # Go to net and prepare if too many people are on our side of hte field
-        if enemies_in_side >= 2:
+        
+        # Go to net and prepare if too many enemies are on our side of the field or no teammates are in our side or if no other teammate is near then et
+        if enemies_in_side >= 2 or teammates_in_side < 1 or ((enemies_in_side > 0 or state.ball.position[1] < 0 if agent.team == 0 else state.ball.position[1] > 0) and min_dist_to_net > 800):
             return (GoToNet(agent, state, state.ball.position), "Waiting at Net")
+        
 
         # Stay back and face ball
         return (Defense(agent, state, agent_intercept.position, 7000), "Waiting for opportunity (Defensive)")

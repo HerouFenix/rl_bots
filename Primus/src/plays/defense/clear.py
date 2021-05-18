@@ -14,7 +14,15 @@ the direction between it and the ball (it doesn't care where the ball goes to, i
 CLEAR_DISTANCE = 1000.0 # How far away we want to shoot the ball
 
 # Several points in the center horizontal line of the arena (y = 0) and sides (x = 4096 or x = -4096)
-points = [vec3(0+i,0,0) for i in range(-4000, 4000, 500)] + [vec3(4096,0+i,0) for i in range(-5000, 5000, 500)] + [vec3(-4096,0+i,0) for i in range(-5000, 5000, 500)]
+#points = [vec3(0+i,0,0) for i in range(-4000, 4000, 500)] + [vec3(4096,0+i,0) for i in range(-5000, 5000, 500)] + [vec3(-4096,0+i,0) for i in range(-5000, 5000, 500)]
+
+side = [vec3(4096, 5120 * i/30, 0) for i in range(-30, 30)]
+other_side = [vec3(-p[0], p[1], 0) for p in side]
+
+def get_target_points(ball: Ball):
+    if abs(ball.position[0]) < 1500:
+        return side + other_side
+    return side if ball.position[0] > 0 else other_side
 
 class DodgeClear(DodgeStrike):
     def configure(self, intercept):
@@ -23,7 +31,8 @@ class DodgeClear(DodgeStrike):
         #self.target = ground_direction(self.car.position, intercept.ball.position)
         #self.target = self.target + normalize(self.target) * CLEAR_DISTANCE
 
-        self.target = self.pick_easiest_target(self.car, intercept.ball, points)
+        #self.target = self.pick_easiest_target(self.car, intercept.ball, points)
+        self.target = self.pick_easiest_target(self.car, intercept.ball, get_target_points(intercept.ball))
 
         super().configure(intercept)
 
@@ -34,7 +43,8 @@ class BumpClear(BumpStrike):
         #self.target = ground_direction(self.car.position, intercept.ball.position)
         #self.target = self.target + normalize(self.target) * CLEAR_DISTANCE
         
-        self.target = self.pick_easiest_target(self.car, intercept.ball, points)
+        #self.target = self.pick_easiest_target(self.car, intercept.ball, points)
+        self.target = self.pick_easiest_target(self.car, intercept.ball, get_target_points(intercept.ball))
         
         super().configure(intercept)
 
@@ -45,6 +55,7 @@ class AerialClear(AerialStrike):
         #self.target = ground_direction(self.car.position, intercept.ball.position)
         #self.target = self.target + normalize(self.target) * CLEAR_DISTANCE
         
-        self.target = self.pick_easiest_target(self.car, intercept.ball, points)
-        
+        #self.target = self.pick_easiest_target(self.car, intercept.ball, points)
+        self.target = self.pick_easiest_target(self.car, intercept.ball, get_target_points(intercept.ball))
+
         super().configure(intercept)

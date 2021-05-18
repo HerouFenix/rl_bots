@@ -15,7 +15,7 @@ class Defense(Play):
 
     # TODO: TRY WITHOUT A TIMEOUT AND INSTEAD SET AS FINISHED IF WE'VE STOPPED
 
-    DURATION = 0.2 # How long we wait for before terminating the play (and maybe restarting it)
+    DURATION = 0.5 # How long we wait for before terminating the play (and maybe restarting it)
     BOOST_LOOK_RADIUS = 1200 # How far away a boostpad can be before being discarded
     BOOST_LOOK_ANGLE = 2.0 # How far away (in terms of angle difference) the boost pad can be before its discaded
 
@@ -141,7 +141,9 @@ class GoToNet(Play):
         )
 
         self.travel = AdvancedDrive(agent, target_pos)
-        self.travel.finish_distance = 300
+        self.travel.finish_distance = 500
+        if near_net:
+            self.travel.drive.target_speed = 1100  # Prevent going too fast if near net
 
         self.drive = Drive(agent)
         self.stop = Stop(agent)
@@ -181,4 +183,4 @@ class GoToNet(Play):
         # Avoid boosting unless really far away
         if self.car.boost < 100 and ground_distance(self.car, self.travel.target) < 4000: self.controls.boost = False
 
-        self.finished = self.travel.driving and self.car.time > self.start_time + self.DURATION
+        self.finished = (self.travel.driving or self.travel.finished) and self.car.time > self.start_time + self.DURATION
