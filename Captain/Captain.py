@@ -3,22 +3,16 @@ from typing import List
 from rlbot.agents.base_agent import BaseAgent, GameTickPacket, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 
-from tmcp import TMCPHandler, TMCPMessage, ActionType
+from tmcp import TMCPHandler, TMCPMessage
 
-from util.drive import steer_toward_target
 from util.vec import Vec3
 from util.utilities import physics_object, Vector
 
-from action.kickoffs.kickoff import Kickoff
-from action.maneuver import Maneuver
-from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strategy
+from policy import base_policy, marujo_strategy
 from tools.drawing import DrawingTool
-from tools.game_info import GameInfo
+from util.game_info import GameInfo
 
-from policy.macros import ACK, KICKOFF, CLEAR, ATTACK, DEFENSE, UNDEFINED
-from policy import offense, defense, kickoffs
-
-from action.recovery import Recovery
+from policy.macros import ACK, KICKOFF, CLEAR, DEFENSE, UNDEFINED
 
 try:
     from rlutilities.linear_algebra import *
@@ -92,10 +86,11 @@ class Captain(BaseAgent):
             self.controls = self.action.controls
 
             if RENDERING:
-                self.draw.group("maneuver")
-                self.draw.color(self.draw.yellow)
-                self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
-                self.action.render(self.draw)
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,10), 2, 2, self.action.name, self.renderer.white())
+
+                self.renderer.draw_line_3d(self.info.cars[self.index].position, self.info.ball.position, self.renderer.white())
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.info.cars[self.index].velocity):.1f}', self.renderer.white())
+                self.renderer.draw_rect_3d(self.info.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
                 
         if RENDERING:
             self.draw.execute()
