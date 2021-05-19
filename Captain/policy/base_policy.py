@@ -1,24 +1,29 @@
-from policy.picker import pick_clear, pick_strike
+from typing import List, Optional, Dict
 
-from plays.defense.defense import Defense
+from action.general_defense import GeneralDefense
+from action.recovery import Recovery
+from action.refuel import Refuel
+from action.strikes.strike import Strike
 from rlutilities.linear_algebra import dot, norm
 from rlutilities.simulation import Car
-from util.game_info import GameInfo
-from util.intercept import Intercept
+from policy import offense, defense, kickoffs
+from tools.game_info import GameInfo
+from tools.intercept import Intercept
+from tools.math import sign
 from tools.vector_math import align, ground, ground_distance, ground_direction, distance
 
-from policy.macros import KICKOFF, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
+from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
 
 
-def choose_stance(info: GameInfo, my_car: Car, team):
+def choose_stance(info: GameInfo, my_car: Car, team, last_sent):
     """ High level assignment of "stances"
         Upon entering a stance, each Marujo is able to decide a few things to do
     """
     ball = info.ball
     teammates = info.get_teammates(my_car)
     my_team = [my_car] + teammates
-    their_goal = ground(info.enemy_net.center)
-    my_goal = ground(info.net.center)
+    their_goal = ground(info.their_goal.center)
+    my_goal = ground(info.my_goal.center)
     opponents = info.get_opponents()
 
     assigned_actions = {index: None for index in team}
@@ -68,12 +73,12 @@ def choose_stance(info: GameInfo, my_car: Car, team):
             if (
                 align(best_intercept.car.position, best_intercept.ball, their_goal) > 0.1
                 or ground_distance(best_intercept, my_goal) < 6000
-                and ATTACK not in assigned_actions.values()
+                and ATTACK not in last_sent.values()
             ):
                 assigned_actions[inter] = ATTACK
 
             # otherwise try to clear
-            else:
+            elif CLEAR not in last_sent.values():
                 assigned_actions[inter] = CLEAR
 
     # Otherwise just assign them to defense / boost depending on whether the ball is
@@ -86,7 +91,7 @@ def choose_stance(info: GameInfo, my_car: Car, team):
         if assigned_actions[index] == None:
             assigned_actions[index] = DEFENSE
 
-    # avoid_demos_and_team_bumps(info, info.cars, assigned_actions)
+    #avoid_demos_and_team_bumps(info, info.cars, assigned_actions)
 
     return assigned_actions
 
@@ -102,7 +107,7 @@ def general_defense(info, my_car, clutch=False):
     shadow_distance = 4000 if ball_in_their_half else 6000
 
     if not clutch:
-        return Defense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
 
     if (
         ground_distance(my_intercept, my_goal) < 3000
@@ -110,10 +115,10 @@ def general_defense(info, my_car, clutch=False):
         and my_car.position[2] < 300
     ):
         if align(my_car.position, my_intercept.ball, their_goal) > 0.5:
-            return pick_strike(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
-        return pick_clear(info, my_intercept.car)
+            return offense.any_shot(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
+        return defense.any_clear(info, my_intercept.car)
 
-    return Defense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+    return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
 
 
 ## Not used yet
