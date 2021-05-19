@@ -71,6 +71,20 @@ class Primus(BaseAgent):
 
         # If bot has picked a play, execute it
         if self.play is not None:
+            """
+            # If ball is going into net, screw it, just try to clear
+            if (isinstance(self.play, Defense) or isinstance(self.play, GoToNet)) and self.state.ball_predictions is not None:
+                danger = False
+                for prediction in self.state.ball_predictions:
+                    if prediction.time < 2.0 and self.state.net.check_inside(prediction.position):
+                        danger = True
+                        break
+
+                if danger:
+                    self.play = strategy.pick_clear(self.state, self.primus)
+                    self.objective = "Danger Clearing"
+            """
+            
             # If we can interrupt, avoid demolition
             if self.play.interruptible():
                 collisions = self.state.detect_collisions_with_agent(self.primus, 0.2, 1 / 60)
@@ -86,17 +100,6 @@ class Primus(BaseAgent):
                         self.objective = "Dodging Enemy"
                         self.controls.throttle = -1
 
-            # If ball is going into net, screw it, just try to clear
-            
-            if (isinstance(self.play, Defense) or isinstance(self.play, GoToNet)) and self.state.ball_predictions is not None:
-                danger = False
-                for prediction in self.state.ball_predictions:
-                    if prediction.time < 1.0 and self.state.net.check_inside(prediction.position):
-                        danger = True
-
-                if danger:
-                    self.play = strategy.pick_clear(self.state, self.primus)
-                    self.objective = "Danger Clearing"
             
 
             self.play.step(self.state.time_delta)
@@ -105,7 +108,7 @@ class Primus(BaseAgent):
             if(self.play.finished): # If the bot finished its play
                 # Get a play to execute
                 self.play, self.objective = strategy.choose_play(self.state, self.primus) # Pick new play
-
+                
                 """Test individual moves"""
                 #self.test_pick_action()
         
