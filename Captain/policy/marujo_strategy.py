@@ -1,22 +1,22 @@
-from action.general_defense import GeneralDefense
-from action.recovery import Recovery
-from action.refuel import Refuel
-from action.strikes.strike import Strike
-from rlutilities.linear_algebra import dot
+from util.game_info import GameInfo
 from rlutilities.simulation import Car
-from policy import offense, defense, kickoffs
-from tools.game_info import GameInfo
-from tools.intercept import Intercept
-from tools.math import sign
-from tools.vector_math import align, ground, ground_distance, ground_direction
+from rlutilities.linear_algebra import vec3
 
-from policy.macros import ACK, KICKOFF, GEN_DEFEND, CLUTCH_DEFEND, BALL, RECOVERY, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
+from policy.macros import KICKOFF, ATTACK, DEFENSE, BOOST, CLEAR, PREEMPTIVE_DEF
+from policy.picker import pick_kickoff, pick_clear, pick_strike
+
+from plays.defense.defense import Defense
+from plays.utility.recovery import Recovery
+from plays.utility.refuel import Refuel
+
+from util.intercept import Intercept
+from util.math import align, ground_distance, ground
+
 
 def choose_action(info: GameInfo, my_car: Car, stance):
     ball = info.ball
-    their_goal = ground(info.their_goal.center)
-    my_goal = ground(info.my_goal.center)
-    opponents = info.get_opponents()
+    their_goal = ground(info.enemy_net.center)
+    my_goal = ground(info.net.center)
 
     # recovery
     if not my_car.on_ground and stance != KICKOFF:
@@ -24,7 +24,7 @@ def choose_action(info: GameInfo, my_car: Car, stance):
 
     # kickoff
     if stance == KICKOFF:
-        return kickoffs.choose_kickoff(info, my_car)
+        return pick_kickoff(info, my_car)
 
     info.predict_ball()
 
@@ -42,60 +42,28 @@ def choose_action(info: GameInfo, my_car: Car, stance):
         return Refuel(my_car, info, forbidden_pads=banned_boostpads)
 
     if stance == ATTACK:
-        return offense.any_shot(info, my_intercept.car, their_goal, my_intercept)
+        return pick_strike(info, my_intercept.car, their_goal, my_intercept)
 
     if stance == CLEAR:
-        return defense.any_clear(info, my_intercept.car)
+        return pick_clear(info, my_intercept.car)
 
     if stance == PREEMPTIVE_DEF:
-        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
+        return Defense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
 
     if stance == DEFENSE:
         if ground_distance(ball, my_goal) < 1000:
-            return defense.any_clear(info, my_intercept.car)
+            return pick_strike(info, my_intercept.car, their_goal, my_intercept)
 
-        return GeneralDefense(my_car, info, my_intercept.position, 7000)
+        return Defense(my_car, info, my_intercept.position, 7000)
 
-    return GeneralDefense(my_car, info, my_intercept.position, 4000)
-
-    # if they can hit the ball sooner than me and they aren't out of position, wait in defense
-    if (
-        their_intercept.time < my_intercept.time
-        and align(opponent.position, their_intercept.ball, my_goal) > -0.1 + opponent.boost / 100
-        and ground_distance(opponent, their_intercept) > 300
-        and dot(opponent.velocity, ground_direction(their_intercept, my_goal)) > 0
-    ):
-        return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
-
-    # if not completely out of position, go for a shot
-    if (
-        align(my_car.position, my_intercept.ball, their_goal) > -0.5
-        or ground_distance(my_intercept, their_goal) < 2000
-        or ground_distance(opponent, their_intercept) < 300
-    ):
-        if my_car.position[2] < 300:
-            shot = offense.any_shot(info, my_intercept.car, their_goal, my_intercept, allow_dribble=True)
-            if (
-                not isinstance(shot, Strike)
-                or shot.intercept.time < their_intercept.time
-                or abs(shot.intercept.position[0]) < 3500
-            ):
-                return shot
-
-    if my_car.boost < 30:
-        refuel = Refuel(my_car, info, forbidden_pads=banned_boostpads)
-        if refuel.pad: return refuel
-
-    # fallback
-    return GeneralDefense(my_car, info, my_intercept.position, shadow_distance, force_nearest=ball_in_their_half)
-
+    return Defense(my_car, info, my_intercept.position, 4000)
 
 def danger(info, my_car):
 
     info.predict_ball()
     my_intercept = Intercept(my_car, info.ball_predictions)
-    their_goal = ground(info.their_goal.center)
-    my_goal = ground(info.my_goal.center)
+    their_goal = ground(info.enemy_net.center)
+    my_goal = ground(info.net.center)
 
     if (
         ground_distance(my_intercept, my_goal) < 3000
