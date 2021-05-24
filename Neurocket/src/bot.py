@@ -1,89 +1,144 @@
+from numpy.core.defchararray import array
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
-from rlbot.messages.flat.QuickChatSelection import QuickChatSelection
-from rlbot.utils.structures.game_data_struct import GameTickPacket
+from rlbot.utils.structures.game_data_struct import BallInfo, GameTickPacket, PlayerInfo
+from rlgym.utils.gamestates.physics_object import PhysicsObject
 
-from util.ball_prediction_analysis import find_slice_at_time
-from util.boost_pad_tracker import BoostPadTracker
-from util.drive import steer_toward_target
-from util.sequence import Sequence, ControlStep
-from util.vec import Vec3
+import obs
+import numpy as np
 
+from agent import Agent
 
 class MyBot(BaseAgent):
-
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
-        self.active_sequence: Sequence = None
-        self.boost_pad_tracker = BoostPadTracker()
+        self.agent = None
 
     def initialize_agent(self):
-        # Set up information about the boost pads now that the game is active and the info is available
-        self.boost_pad_tracker.initialize_boosts(self.get_field_info())
+        team_size = self.get_match_settings().PlayerConfigurationsLength() // 2
+    
+        if team_size == 1:
+            game_mode = "Duel"
+        elif team_size == 2:
+            game_mode = "Doubles"
+        elif team_size == 3:
+            game_mode = "Standard"
+        else:
+            raise Exception("Unknown team size {}.".format(team_size))
+
+        input_shape = obs.get_input_shape(team_size)
+        print("################################################")
+        print("# Input shape:", input_shape, "#")
+        print("# Team size:", team_size, "#")
+        print("################################################")
+
+        # Learning rate and Gamma won't matter because we won't be doing any training here but they are needed to initialize the agent
+        LR = 0.0005
+        GAMMA = 0.99
+        self.agent = Agent(alpha=LR, gamma=GAMMA, n_actions=2**8,
+                    epsilon = 0.01, batch_size=64, input_dims=input_shape[0], fname="./save/" + game_mode + "_model.h5")
+        self.agent.load_model()
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         """
         This function will be called by the framework many times per second. This is where you can
         see the motion of the ball, etc. and return controls to drive your car.
         """
+        state = self.build_state(packet)
 
-        # Keep our boost pad info updated with which pads are currently active
-        self.boost_pad_tracker.update_boost_status(packet)
-
-        # This is good to keep at the beginning of get_output. It will allow you to continue
-        # any sequences that you may have started during a previous call to get_output.
-        if self.active_sequence is not None and not self.active_sequence.done:
-            controls = self.active_sequence.tick(packet)
-            if controls is not None:
-                return controls
-
-        # Gather some information about our car and the ball
-        my_car = packet.game_cars[self.index]
-        car_location = Vec3(my_car.physics.location)
-        car_velocity = Vec3(my_car.physics.velocity)
-        ball_location = Vec3(packet.game_ball.physics.location)
-
-        # By default we will chase the ball, but target_location can be changed later
-        target_location = ball_location
-
-        if car_location.dist(ball_location) > 1500:
-            # We're far away from the ball, let's try to lead it a little bit
-            ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
-            ball_in_future = find_slice_at_time(ball_prediction, packet.game_info.seconds_elapsed + 2)
-
-            # ball_in_future might be None if we don't have an adequate ball prediction right now, like during
-            # replays, so check it to avoid errors.
-            if ball_in_future is not None:
-                target_location = Vec3(ball_in_future.physics.location)
-                self.renderer.draw_line_3d(ball_location, target_location, self.renderer.cyan())
-
-        # Draw some things to help understand what the bot is thinking
-        self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
-        self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
-
-        if 750 < car_velocity.length() < 800:
-            # We'll do a front flip if the car is moving at a certain speed.
-            return self.begin_front_flip(packet)
+        _, action = self.agent.choose_action(state)
 
         controls = SimpleControllerState()
-        controls.steer = steer_toward_target(my_car, target_location)
-        controls.throttle = 1.0
-        # You can set more controls if you want, like controls.boost.
 
+        map_action_to_controls(action, controls)
+        
         return controls
 
-    def begin_front_flip(self, packet):
-        # Send some quickchat just for fun
-        self.send_quick_chat(team_only=False, quick_chat=QuickChatSelection.Information_IGotIt)
+    def build_state(self, packet: GameTickPacket):
 
-        # Do a front flip. We will be committed to this for a few seconds and the bot will ignore other
-        # logic during that time because we are setting the active_sequence.
-        self.active_sequence = Sequence([
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
-            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, pitch=-1)),
-            ControlStep(duration=0.8, controls=SimpleControllerState()),
-        ])
+        my_car = packet.game_cars[self.index]
+        own_team = my_car.team
 
-        # Return the controls associated with the beginning of the sequence so we can start right away.
-        return self.active_sequence.tick(packet)
+        observation = []
+        tm8s = []
+        opponents = []
+
+        for i in range(packet.num_cars):
+            player_other = packet.game_cars[i]
+            if self.index != i:
+                if player_other.team == own_team:
+                    tm8s.append(player_other)
+                else:
+                    opponents.append(player_other)
+
+        # Mirror states in relation to team
+        inverted = own_team != 0
+        
+        observation += serialize_ball(packet.game_ball, inverted)
+        observation += serialize_player(my_car, inverted)
+        for pl in tm8s:
+            observation += serialize_player(pl, inverted)
+        for pl in opponents:
+            observation += serialize_player(pl, inverted)
+
+        return np.asarray(observation, dtype=np.float32)
+
+
+def map_action_to_controls(action: int, controls: SimpleControllerState):
+    """
+    Imagining the agent as a Keyboard player, its inputs can only be booleans
+    1st bit: Throttle
+    2nd bit: Steering
+    3rd bit: Pitch
+    4th bit: Yaw
+    5th bit: Roll
+    6th bit: Jump
+    7th bit: Boost
+    8th bit: Handbrake
+    """
+    controls.throttle = 1 if action & 1 else -1
+    controls.steer = 1 if action & 2 else -1
+    controls.pitch = 1 if action & 4 else -1
+    controls.yaw = 1 if action & 8 else -1
+    controls.roll = 1 if action & 16 else -1
+    controls.jump = 1 if action & 32 else -1
+    controls.boost = 1 if action & 64 else -1
+    controls.handbrake = 1 if action & 128 else -1
+
+def serialize_ball(ball: BallInfo, inverted=False):
+    ball_physics = ball.physics
+
+    if inverted:
+        phys = PhysicsObject(np.array([ball_physics.location.x, -ball_physics.location.y, ball_physics.location.z]), \
+                             None, \
+                             linear_velocity=np.array([ball_physics.velocity.x, -ball_physics.velocity.y, ball_physics.velocity.z]), \
+                             angular_velocity=np.array([ball_physics.angular_velocity.x, -ball_physics.angular_velocity.y, ball_physics.angular_velocity.z]))
+    else:
+        phys = PhysicsObject(np.array([ball_physics.location.x, ball_physics.location.y, ball_physics.location.z]), \
+                             None, \
+                             linear_velocity=np.array([ball_physics.velocity.x, ball_physics.velocity.y, ball_physics.velocity.z]), \
+                             angular_velocity=np.array([ball_physics.angular_velocity.x, ball_physics.angular_velocity.y, ball_physics.angular_velocity.z]))
+    
+    phys.euler_angles()
+    phys.rotation_mtx()
+
+    return phys.serialize()
+
+def serialize_player(player: PlayerInfo, inverted=False):
+    player_physics = player.physics
+
+    if inverted:
+        phys = PhysicsObject(np.array([player_physics.location.x, -player_physics.location.y, player_physics.location.z]), \
+                             None, \
+                             linear_velocity=np.array([player_physics.velocity.x, -player_physics.velocity.y, player_physics.velocity.z]), \
+                             angular_velocity=np.array([player_physics.angular_velocity.x, -player_physics.angular_velocity.y, player_physics.angular_velocity.z]))    
+    else:
+        phys = PhysicsObject(np.array([player_physics.location.x, player_physics.location.y, player_physics.location.z]), \
+                             None, \
+                             linear_velocity=np.array([player_physics.velocity.x, player_physics.velocity.y, player_physics.velocity.z]), \
+                             angular_velocity=np.array([player_physics.angular_velocity.x, player_physics.angular_velocity.y, player_physics.angular_velocity.z]))
+
+    #phys._euler_angles = np.array([player_physics.rotation.pitch, player_physics.rotation.yaw, player_physics.rotation.roll])
+    phys.euler_angles()
+    phys.rotation_mtx()
+
+    return phys.serialize()

@@ -78,7 +78,7 @@ def mapAction(action: int) -> np.ndarray:
 class Agent:
     def __init__(self, alpha, gamma, n_actions, epsilon, batch_size,
                  input_dims, epsilon_dec=0.9996,  epsilon_end=0.01,
-                 mem_size=1000000, fname='./save/dqn_model.h5'):
+                 mem_size=1, fname='./save/dqn_model.h5'):
         self.action_space = [i for i in range(n_actions)]
         self.gamma = gamma
         self.epsilon = epsilon
