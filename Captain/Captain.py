@@ -3,22 +3,16 @@ from typing import List
 from rlbot.agents.base_agent import BaseAgent, GameTickPacket, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 
-from tmcp import TMCPHandler, TMCPMessage, ActionType
+from tmcp import TMCPHandler, TMCPMessage
 
-from util.drive import steer_toward_target
 from util.vec import Vec3
 from util.utilities import physics_object, Vector
 
-from action.kickoffs.kickoff import Kickoff
-from action.maneuver import Maneuver
-from policy import solo_strategy, teamplay_strategy, base_policy, marujo_strategy
+from policy import base_policy, marujo_strategy
 from tools.drawing import DrawingTool
-from tools.game_info import GameInfo
+from util.game_info import GameInfo
 
-from policy.macros import ACK, KICKOFF, CLEAR, ATTACK, DEFENSE, UNDEFINED
-from policy import offense, defense, kickoffs
-
-from action.recovery import Recovery
+from policy.macros import ACK, KICKOFF, CLEAR, DEFENSE, UNDEFINED
 
 try:
     from rlutilities.linear_algebra import *
@@ -73,7 +67,6 @@ class Captain(BaseAgent):
         # Choosing the action: only the captain decides
         if self.captain:
             my_team = [i for i in range(self.info.num_cars) if self.info.cars[i].team == self.team]
-        #     self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team, self.last_sent)
         
         # Send / Receive TMCP messages
         self.handle_comms(packet)
@@ -82,6 +75,9 @@ class Captain(BaseAgent):
         if self.action == None or self.action.finished:
             if self.captain:
                 self.team_actions = base_policy.choose_stance(self.info, self.info.cars[self.index], my_team, self.last_sent)
+
+                # Send actions as captain
+                self.handle_comms(packet)
 
             # Pick action according to previous orders
             self.action = marujo_strategy.choose_action(self.info, self.info.cars[self.index], self.stance)
@@ -92,10 +88,11 @@ class Captain(BaseAgent):
             self.controls = self.action.controls
 
             if RENDERING:
-                self.draw.group("maneuver")
-                self.draw.color(self.draw.yellow)
-                self.draw.string(self.info.cars[self.index].position + vec3(0, 0, 50), type(self.action).__name__)
-                self.action.render(self.draw)
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,10), 2, 2, self.action.name, self.renderer.white())
+
+                self.renderer.draw_line_3d(self.info.cars[self.index].position, self.info.ball.position, self.renderer.white())
+                self.renderer.draw_string_3d(self.info.cars[self.index].position + vec3(0,0,-5), 1, 1, f'Speed: {norm(self.info.cars[self.index].velocity):.1f}', self.renderer.white())
+                self.renderer.draw_rect_3d(self.info.ball.position , 8, 8, True, self.renderer.cyan(), centered=True)
                 
         if RENDERING:
             self.draw.execute()
@@ -127,6 +124,7 @@ class Captain(BaseAgent):
             _obj.rotation = Vector([car.physics.rotation.pitch, car.physics.rotation.yaw, car.physics.rotation.roll])
             _obj.avelocity = Vector([car.physics.angular_velocity.x, car.physics.angular_velocity.y, car.physics.angular_velocity.z])
             _obj.boostLevel = car.boost
+            #_obj.local_location = localizeVector(_obj,self.me)
 
             if i != self.index:
                 if car.team == self.team:
@@ -187,7 +185,7 @@ class Captain(BaseAgent):
             self.action = None
             self.stance = UNDEFINED
 
-        if self.negotiated and not packet.game_info.is_kickoff_pause:
+        if self.negotiated and not packet.game_info.is_kickoff_pause and not self.captain:
             self.negotiated = False
 
         # reset action when another car hits the ball
