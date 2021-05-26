@@ -3,10 +3,9 @@ from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import BallInfo, GameTickPacket, PlayerInfo
 from rlgym.utils.gamestates.physics_object import PhysicsObject
 
-import obs
 import numpy as np
 
-from agent import Agent
+from playing_agent import PlayingAgent
 
 class MyBot(BaseAgent):
     def __init__(self, name, team, index):
@@ -25,18 +24,7 @@ class MyBot(BaseAgent):
         else:
             raise Exception("Unknown team size {}.".format(team_size))
 
-        input_shape = obs.get_input_shape(team_size)
-        print("################################################")
-        print("# Input shape:", input_shape, "#")
-        print("# Team size:", team_size, "#")
-        print("################################################")
-
-        # Learning rate and Gamma won't matter because we won't be doing any training here but they are needed to initialize the agent
-        LR = 0.0005
-        GAMMA = 0.99
-        self.agent = Agent(alpha=LR, gamma=GAMMA, n_actions=2**8,
-                    epsilon = 0.01, batch_size=64, input_dims=input_shape[0], fname="./save/" + game_mode + "_model.h5")
-        self.agent.load_model()
+        self.agent = PlayingAgent(fname="./save/" + game_mode + "_model.h5")
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         """

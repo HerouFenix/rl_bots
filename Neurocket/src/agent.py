@@ -1,4 +1,3 @@
-import tensorflow
 from tensorflow.keras.layers import Dense, Activation
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.optimizers import Adam
@@ -45,10 +44,8 @@ class ReplayBuffer:
 
 def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
     model = Sequential([
-                Dense(fc1_dims, input_shape=(input_dims,)),
-                Activation('relu'),
-                Dense(fc2_dims),
-                Activation('relu'),
+                Dense(fc1_dims, activation="relu", input_shape=(input_dims,)),
+                Dense(fc2_dims, activation="relu"),
                 Dense(n_actions)])
 
     model.compile(optimizer=Adam(learning_rate=lr), loss='mse')
@@ -78,7 +75,7 @@ def mapAction(action: int) -> np.ndarray:
 class Agent:
     def __init__(self, alpha, gamma, n_actions, epsilon, batch_size,
                  input_dims, epsilon_dec=0.9996,  epsilon_end=0.01,
-                 mem_size=1, fname='./save/dqn_model.h5'):
+                 mem_size=100_000, fname='./save/dqn_model.h5'):
         self.action_space = [i for i in range(n_actions)]
         self.gamma = gamma
         self.epsilon = epsilon
