@@ -1,10 +1,9 @@
 from numpy.core.defchararray import array
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import BallInfo, GameTickPacket, PlayerInfo
-from rlgym.utils.gamestates.physics_object import PhysicsObject
-
 import numpy as np
 
+from physics_object import PhysicsObject
 from playing_agent import PlayingAgent
 
 class MyBot(BaseAgent):
@@ -96,13 +95,11 @@ def serialize_ball(ball: BallInfo, inverted=False):
     ball_physics = ball.physics
 
     if inverted:
-        phys = PhysicsObject(np.array([ball_physics.location.x, -ball_physics.location.y, ball_physics.location.z]), \
-                             None, \
+        phys = PhysicsObject(position=np.array([ball_physics.location.x, -ball_physics.location.y, ball_physics.location.z]), \
                              linear_velocity=np.array([ball_physics.velocity.x, -ball_physics.velocity.y, ball_physics.velocity.z]), \
                              angular_velocity=np.array([ball_physics.angular_velocity.x, -ball_physics.angular_velocity.y, ball_physics.angular_velocity.z]))
     else:
-        phys = PhysicsObject(np.array([ball_physics.location.x, ball_physics.location.y, ball_physics.location.z]), \
-                             None, \
+        phys = PhysicsObject(position=np.array([ball_physics.location.x, ball_physics.location.y, ball_physics.location.z]), \
                              linear_velocity=np.array([ball_physics.velocity.x, ball_physics.velocity.y, ball_physics.velocity.z]), \
                              angular_velocity=np.array([ball_physics.angular_velocity.x, ball_physics.angular_velocity.y, ball_physics.angular_velocity.z]))
     
@@ -115,13 +112,11 @@ def serialize_player(player: PlayerInfo, inverted=False):
     player_physics = player.physics
 
     if inverted:
-        phys = PhysicsObject(np.array([player_physics.location.x, -player_physics.location.y, player_physics.location.z]), \
-                             None, \
+        phys = PhysicsObject(position=np.array([player_physics.location.x, -player_physics.location.y, player_physics.location.z]), \
                              linear_velocity=np.array([player_physics.velocity.x, -player_physics.velocity.y, player_physics.velocity.z]), \
                              angular_velocity=np.array([player_physics.angular_velocity.x, -player_physics.angular_velocity.y, player_physics.angular_velocity.z]))    
     else:
-        phys = PhysicsObject(np.array([player_physics.location.x, player_physics.location.y, player_physics.location.z]), \
-                             None, \
+        phys = PhysicsObject(position=np.array([player_physics.location.x, player_physics.location.y, player_physics.location.z]), \
                              linear_velocity=np.array([player_physics.velocity.x, player_physics.velocity.y, player_physics.velocity.z]), \
                              angular_velocity=np.array([player_physics.angular_velocity.x, player_physics.angular_velocity.y, player_physics.angular_velocity.z]))
 
