@@ -14,7 +14,13 @@ The bot's main loop and implementation is written within the **src/bot.py** file
 The **src/plays** folder contains all of the individually developed plays (actions) that Primus can perform. Additionally, Primus' decision making flow is also within this folder inside the file **src/plays/strategy.py**. 
 
 ## Capitão
-[TODO]
+Capitão's folder structure is divided in modules with varying levels of granularity and function.
+- **plays** - Contains the actions used by Capitão 
+- **policy** - Contains the leader and marujo's decision making logic as well as macros. Leader decision making assigns stances (using macros) and marujo decision making converts macros to actions.
+- **rlutilities, tools, util** - Contains utilities used for performing computations, `GameInfo` class and low-level super classes inherited by most RLBot agents.
+- **training** - Contains exercises used to assess how Capitão handles particular situations.
+
+Capitão's main code can be found in `Captain.py`. There it handles all the communication between its teammates, negotiates who the leader is, calls policy methods and, more importantly, return controls to the game at every game tick.
 
 ## NeuroRocket
 [TODO]
