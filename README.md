@@ -1,6 +1,24 @@
 # rl_bots
 Bots for Rocket League using RLBot - AASMA Project @ IST 2021
 
+
+# Project Structure
+Within this repository are 3 different bots, **Primus**, **Capitão** and **NeuroRocket**. Each have a slightly different strucutre.
+
+## Primus
+Within Primus' folder, two sub folders can be found:
+- **src** - Contains all of the bot's source code
+- **training** - Contains training scenarios (used for testing and debugging the plays) made using RLBotTraining
+
+The bot's main loop and implementation is written within the **src/bot.py** file. Within the utils folder, other modules developed for Primus can be found, such as the **src/utils/game_info** class, math/algebra functions within the **src/utils/math.py** and the intercept lookup tables and logic **src/intercept.py**.
+The **src/plays** folder contains all of the individually developed plays (actions) that Primus can perform.
+
+## Capitão
+[TODO]
+
+## NeuroRocket
+[TODO]
+
 # How to run
 A Windows OS is required since Rocket League does not run on Linux systems
 
