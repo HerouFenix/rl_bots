@@ -42,9 +42,11 @@ Neurocket has two main folders:
   - **main.py** - This file is used for training in the [RLGym](https://rlgym.github.io/) environment by using an `Agent`.
 
 # Links
-## Showcase - https://www.youtube.com/watch?v=CNW3GA6i3XU
-## Primus VS ReliefBot - https://www.youtube.com/watch?v=Y0trXzKRuYI
-## Capitão VS Diablo - https://www.youtube.com/watch?v=yG4KzQlEAUc&t=75s
+Showcase - https://www.youtube.com/watch?v=CNW3GA6i3XU
+
+Primus VS ReliefBot - https://www.youtube.com/watch?v=Y0trXzKRuYI
+
+Capitão VS Diablo - https://www.youtube.com/watch?v=yG4KzQlEAUc&t=75s
 
 # How to run
 A Windows OS is required since Rocket League does not run on Linux systems
