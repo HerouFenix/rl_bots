@@ -1,9 +1,17 @@
 # rl_bots
 Bots for Rocket League using RLBot - AASMA Project @ IST 2021
 
+# Table of Contents
+- [Project Structure](#project-structure)
+  - [Primus](#primus)
+  - [Capitão](#capitão)
+  - [NeuRocket](#neurocket)
+- [How to run](#how-to-run)
+  - [Rocket League](#rocket-league)
+  - [RLBot](#rlbot)
 
 # Project Structure
-Within this repository are 3 different bots, **Primus**, **Capitão** and **NeuroRocket**. Each have a slightly different strucutre.
+Within this repository are 3 different bots, **Primus**, **Capitão** and **NeuRocket**. Each have a slightly different strucutre.
 
 ## Primus
 Within Primus' folder, two sub folders can be found:
@@ -22,8 +30,16 @@ Capitão's folder structure is divided in modules with varying levels of granula
 
 Capitão's main code can be found in `Captain.py`. There it handles all the communication between its teammates, negotiates who the leader is, calls policy methods and, more importantly, return controls to the game at every game tick.
 
-## NeuroRocket
-[TODO]
+## NeuRocket
+Neurocket has two main folders:
+- **save** - Contains the saved models from training.
+- **src**
+  - **agent.py** - Contains the code for training the DQN and the `ReplayBuffer` to utilize [Experience Replay](https://arxiv.org/pdf/2007.06700.pdf).
+  - **obs.py** - Contains the code that builds the state to use as input for the DQN from the game state.
+  - **reward.py** - This where the reward function is defined.
+  - **playing_agent.py** - A "playing" version of agent that doesn't have the code to train the network or to sometimes take random actions based on an *epsilon-greedy* strategy.
+  - **bot.py** - This file is used by the RLBot Framework to run Neurocket. Here a `PlayingAgent` is created and used to choose actions.
+  - **main.py** - This file is used for training in the [RLGym](https://rlgym.github.io/) environment by using an `Agent`.
 
 # How to run
 A Windows OS is required since Rocket League does not run on Linux systems
@@ -58,4 +74,5 @@ A Windows OS is required since Rocket League does not run on Linux systems
 ![Set launcher](./tutorial/set-launcher.png)
 
 - Start the game! After a bit Rocket League should load with the bots in play and you in spectator mode!
+  - If some agents seem to not move check the command-line opened by the RLBotGUI to see if there are any errors
 ![start match](./tutorial/start-match.png)
