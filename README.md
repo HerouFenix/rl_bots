@@ -11,7 +11,7 @@ Within Primus' folder, two sub folders can be found:
 - **training** - Contains training scenarios (used for testing and debugging the plays) made using RLBotTraining
 
 The bot's main loop and implementation is written within the **src/bot.py** file. Within the utils folder, other modules developed for Primus can be found, such as the **src/utils/game_info** class, math/algebra functions within the **src/utils/math.py** and the intercept lookup tables and logic **src/intercept.py**.
-The **src/plays** folder contains all of the individually developed plays (actions) that Primus can perform.
+The **src/plays** folder contains all of the individually developed plays (actions) that Primus can perform. Additionally, Primus' decision making flow is also within this folder inside the file **src/plays/strategy.py**. 
 
 ## Capitão
 [TODO]
